@@ -1,6 +1,6 @@
 {
-	"id": "obsidian-ai-assistant",
-	"name": "AI Assistant",
+	"id": "ai-assistant",
+	"name": "Obsidian AI Assistant",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
 	"description": "AI Assistant plugin for Obsidian",
