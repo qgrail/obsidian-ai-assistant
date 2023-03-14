@@ -10,9 +10,7 @@ import {
 import { PromptModal, ChatModal } from "./modal";
 import { OpenAI } from "./openai_api";
 
-// Remember to rename these classes and interfaces!
-
-interface MyPluginSettings {
+interface AiAssistantSettings {
 	mySetting: string;
 	apiKey: string;
 	modelName: string;
@@ -20,7 +18,7 @@ interface MyPluginSettings {
 	replaceSelection: boolean;
 }
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
+const DEFAULT_SETTINGS: AiAssistantSettings = {
 	mySetting: "default",
 	apiKey: "",
 	modelName: "gpt-3.5-turbo",
@@ -28,8 +26,8 @@ const DEFAULT_SETTINGS: MyPluginSettings = {
 	replaceSelection: true,
 };
 
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+export default class AiAssistantPlugin extends Plugin {
+	settings: AiAssistantSettings;
 	openai: any;
 
 	build_api() {
@@ -46,7 +44,7 @@ export default class MyPlugin extends Plugin {
 
 		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
-			id: "open-ai_assistant-chat",
+			id: "chat-mode",
 			name: "Open Assistant Chat",
 			callback: () => {
 				new ChatModal(this.app, this.openai).open();
@@ -55,7 +53,7 @@ export default class MyPlugin extends Plugin {
 
 		// This adds an editor command that can perform some operation on the current editor instance
 		this.addCommand({
-			id: "opem-ai_assistant-prompt",
+			id: "prompt-mode",
 			name: "Open Assistant Prompt",
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
 				const selected_text = editor.getSelection().toString();
@@ -74,7 +72,7 @@ export default class MyPlugin extends Plugin {
 			},
 		});
 
-		this.addSettingTab(new SampleSettingTab(this.app, this));
+		this.addSettingTab(new AiAssistantSettingTab(this.app, this));
 	}
 
 	onunload() {}
@@ -92,10 +90,10 @@ export default class MyPlugin extends Plugin {
 	}
 }
 
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
+class AiAssistantSettingTab extends PluginSettingTab {
+	plugin: AiAssistantPlugin;
 
-	constructor(app: App, plugin: MyPlugin) {
+	constructor(app: App, plugin: AiAssistantPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
