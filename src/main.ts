@@ -28,7 +28,7 @@ const DEFAULT_SETTINGS: AiAssistantSettings = {
 
 export default class AiAssistantPlugin extends Plugin {
 	settings: AiAssistantSettings;
-	openai: any;
+	openai: OpenAI;
 
 	build_api() {
 		this.openai = new OpenAI(
@@ -56,18 +56,20 @@ export default class AiAssistantPlugin extends Plugin {
 			id: "prompt-mode",
 			name: "Open Assistant Prompt",
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
-				const selected_text = editor.getSelection().toString();
+				const selected_text = editor.getSelection().toString().trim();
 				new PromptModal(this.app, async (x) => {
 					let answer = await this.openai.api_call([
 						{
 							role: "user",
-							content: x.trim() + " : " + selected_text.trim(),
+							content: x.trim() + " : " + selected_text,
 						},
 					]);
 					if (!this.settings.replaceSelection) {
-						answer = selected_text.trim() + "\n" + answer.trim();
+						answer = selected_text + "\n" + answer.trim();
 					}
-					editor.replaceSelection(answer.trim());
+					if (answer) {
+						editor.replaceSelection(answer.trim());
+					}
 				}).open();
 			},
 		});

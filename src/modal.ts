@@ -49,7 +49,7 @@ export class PromptModal extends Modal {
 }
 
 export class ChatModal extends Modal {
-	chat_text: string;
+	prompt_text: string;
 	prompt_table: { [key: string]: string }[] = [];
 	openai: any;
 
@@ -60,21 +60,26 @@ export class ChatModal extends Modal {
 
 	clearModalContent() {
 		this.contentEl.innerHTML = "";
-		this.chat_text = "";
+		this.prompt_text = "";
 	}
 
 	send_action = async () => {
-		if (this.chat_text) {
-			this.prompt_table.push({
+		if (this.prompt_text) {
+			const prompt = {
 				role: "user",
-				content: this.chat_text,
-			});
-			const answer = await this.openai.api_call(this.prompt_table);
+				content: this.prompt_text,
+			};
 
-			this.prompt_table.push({
-				role: "assistant",
-				content: answer,
-			});
+			const answer = await this.openai.api_call(
+				this.prompt_table.concat(prompt)
+			);
+			if (answer) {
+				this.prompt_table.push(prompt, {
+					role: "assistant",
+					content: answer,
+				});
+			}
+
 			this.clearModalContent();
 			this.displayModalContent();
 		}
@@ -96,7 +101,7 @@ export class ChatModal extends Modal {
 			.setClass("user")
 			.addText((text) => {
 				text.setPlaceholder("Your prompt here").onChange((value) => {
-					this.chat_text = value.trim();
+					this.prompt_text = value.trim();
 				});
 			});
 
