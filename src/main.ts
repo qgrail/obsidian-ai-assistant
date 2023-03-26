@@ -1,7 +1,6 @@
 import {
 	App,
 	Editor,
-	MarkdownView,
 	Notice,
 	Plugin,
 	PluginSettingTab,
@@ -55,22 +54,51 @@ export default class AiAssistantPlugin extends Plugin {
 		this.addCommand({
 			id: "prompt-mode",
 			name: "Open Assistant Prompt",
-			editorCallback: async (editor: Editor, view: MarkdownView) => {
+			editorCallback: async (editor: Editor) => {
 				const selected_text = editor.getSelection().toString().trim();
-				new PromptModal(this.app, async (x) => {
-					let answer = await this.openai.api_call([
-						{
-							role: "user",
-							content: x.trim() + " : " + selected_text,
-						},
-					]);
-					if (!this.settings.replaceSelection) {
-						answer = selected_text + "\n" + answer.trim();
-					}
-					if (answer) {
-						editor.replaceSelection(answer.trim());
-					}
-				}).open();
+				new PromptModal(
+					this.app,
+					async (x: { [key: string]: string }) => {
+						let answer = await this.openai.api_call([
+							{
+								role: "user",
+								content:
+									x["prompt_text"] + " : " + selected_text,
+							},
+						]);
+						if (!this.settings.replaceSelection) {
+							answer = selected_text + "\n" + answer.trim();
+						}
+						if (answer) {
+							editor.replaceSelection(answer.trim());
+						}
+					},
+					false
+				).open();
+			},
+		});
+
+		// This adds an editor command that can perform some operation on the current editor instance
+		this.addCommand({
+			id: "img-generator",
+			name: "Open Image Generator",
+			editorCallback: async (editor: Editor) => {
+				new PromptModal(
+					this.app,
+					async (prompt: { [key: string]: string }) => {
+						const answer = await this.openai.img_api_call(
+							prompt["prompt_text"],
+							prompt["img_size"]
+						);
+						if (answer) {
+							editor.replaceRange(
+								`![${prompt["prompt_text"]}](${answer})`,
+								editor.getCursor()
+							);
+						}
+					},
+					true
+				).open();
 			},
 		});
 
@@ -127,7 +155,7 @@ class AiAssistantSettingTab extends PluginSettingTab {
 				dropdown
 					.addOptions({
 						"gpt-3.5-turbo": "gpt-3.5-turbo",
-						"gpt-4": "gpt-4"
+						"gpt-4": "gpt-4",
 					})
 					.setValue(this.plugin.settings.modelName)
 					.onChange(async (value) => {

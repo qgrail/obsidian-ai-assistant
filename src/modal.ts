@@ -3,41 +3,61 @@ import { App, Modal, Notice, Setting } from "obsidian";
 const ROLES = ["user", "assistant"];
 
 export class PromptModal extends Modal {
-	prompt_text: string;
-	onSubmit: (prompt_text: string) => void;
+	param_dict: { [key: string]: string };
+	onSubmit: (input_dict: object) => void;
+	is_img_modal: boolean;
 
-	constructor(app: App, onSubmit: (prompt_text: string) => void) {
+	constructor(
+		app: App,
+		onSubmit: (x: object) => void,
+		is_img_modal: boolean
+	) {
 		super(app);
 		this.onSubmit = onSubmit;
+		this.is_img_modal = is_img_modal;
+		this.param_dict = { img_size: "256x256" };
 	}
 
 	onOpen() {
 		let { contentEl } = this;
-
 		this.titleEl.setText("What can I do for you?");
 		const prompt_area = new Setting(contentEl).addText((text) =>
 			text.onChange((value) => {
-				this.prompt_text = value.trim();
+				this.param_dict["prompt_text"] = value.trim();
 			})
 		);
 
-		prompt_area.addButton((btn) =>
+		const submit_btn = prompt_area.addButton((btn) =>
 			btn
 				.setButtonText("Submit")
 				.setCta()
 				.onClick(() => {
-					if (this.prompt_text) {
+					if (this.param_dict["prompt_text"]) {
 						this.close();
-						this.onSubmit(this.prompt_text);
+						this.onSubmit(this.param_dict);
 					}
 				})
 		);
 
+		if (this.is_img_modal)
+			submit_btn.addDropdown((dropdown) =>
+				dropdown
+					.addOptions({
+						"256x256": "256x256",
+						"512x512": "512x512",
+						"1024x1024": "1024x1024",
+					})
+					.setValue(this.param_dict["img_size"])
+					.onChange(async (value) => {
+						this.param_dict["img_size"] = value;
+					})
+			);
+
 		const input_prompt = this.modalEl.getElementsByTagName("input")[0];
 		input_prompt.addEventListener("keypress", (evt) => {
-			if (evt.key === "Enter" && this.prompt_text) {
+			if (evt.key === "Enter" && this.param_dict["prompt_text"]) {
 				this.close();
-				this.onSubmit(this.prompt_text);
+				this.onSubmit(this.param_dict);
 			}
 		});
 	}
