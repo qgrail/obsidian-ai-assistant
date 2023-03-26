@@ -127,6 +127,8 @@ class AiAssistantSettingTab extends PluginSettingTab {
 				dropdown
 					.addOptions({
 						"gpt-3.5-turbo": "gpt-3.5-turbo",
+						"gpt-4": "gpt-4",
+						"gpt-4-32k,": "gpt-4-32k,",
 					})
 					.setValue(this.plugin.settings.modelName)
 					.onChange(async (value) => {

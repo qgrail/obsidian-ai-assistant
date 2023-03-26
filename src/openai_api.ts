@@ -15,12 +15,14 @@ export class OpenAI {
 		this.maxTokens = maxTokens;
 	}
 	api_call = async (prompt_list: { [key: string]: string }[]) => {
+		console.log(this.modelName);
 		try {
 			const completion = await this.apiFun.createChatCompletion({
 				model: this.modelName,
 				messages: prompt_list,
 				max_tokens: this.maxTokens,
 			});
+			console.log(completion);
 			return completion.data.choices[0].message.content;
 		} catch (err) {
 			new Notice("Error in API call !");
