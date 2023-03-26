@@ -29,6 +29,13 @@ From here you can ask the assistant to translate, summarize, generate code ect.
 - Replace or Add below: In prompt mode, after having selected text from your note and enter your prompt, 
 you can decide to replace your text by the assistant answer or to paste it bellow.
 
+## How to install
+
+1. `cd path/to/vault/.obsidian/plugins`
+2. `git clone https://github.com/qgrail/obsidian-ai-assistant.git && cd obsidian-ai-assistant`
+3. `npm install && npm run build`
+4. Open **Obsidian Preferences** -> **Community plugins**
+5. Refresh Installed plugins and activate AI Assistant.
 
 ## Requirement
 
