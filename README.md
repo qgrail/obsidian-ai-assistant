@@ -14,7 +14,7 @@ Currently, you have two different approaches to interact with the assistant:
 
 ### Chat mode
 You can chat with an AI assistant from your Vault to generate content for your notes.
-From the chat, you can clic on any interaction to copy it direclty to your clipboard.
+From the chat, you can clic on any interaction to copy it directly to your clipboard.
 You can also copy the whole conversation.
 
 
@@ -24,7 +24,7 @@ From here you can ask the assistant to translate, summarize, generate code ect.
 
 
 ## Settings
-- Model choice: choice of model. Currently only `chat-gpt-turbo` is supported.
+- Model choice: choice of model. Currently `gpt-3.5-turbo` and `gpt-4` are supported.
 - Temperature and max token
 - Replace or Add below: In prompt mode, after having selected text from your note and enter your prompt, 
 you can decide to replace your text by the assistant answer or to paste it bellow.
