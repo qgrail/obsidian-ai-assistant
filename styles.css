@@ -8,3 +8,19 @@
 	font-weight: 200;
 }
 
+.image-modal-container {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	text-align: center;
+}
+
+.image-modal-wrapper {
+	width: 45%;
+	margin: 1%;
+}
+.image-modal-image{
+	width: 100%;
+	max-height: 30vh;
+	object-fit: contain;
+}

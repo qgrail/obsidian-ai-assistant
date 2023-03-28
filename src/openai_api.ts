@@ -30,14 +30,18 @@ export class OpenAI {
 		}
 	};
 
-	img_api_call = async (prompt: string, img_size: string) => {
+	img_api_call = async (
+		prompt: string,
+		img_size: string,
+		num_img: number
+	) => {
 		try {
 			const response = await this.apiFun.createImage({
 				prompt: prompt,
-				n: 1,
+				n: num_img,
 				size: img_size,
 			});
-			return response.data.data[0].url;
+			return response.data.data.map((x: any) => x.url);
 		} catch (err) {
 			new Notice("Error in API call !");
 		}

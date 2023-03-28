@@ -15,11 +15,11 @@ export class PromptModal extends Modal {
 		super(app);
 		this.onSubmit = onSubmit;
 		this.is_img_modal = is_img_modal;
-		this.param_dict = { img_size: "256x256" };
+		this.param_dict = { img_size: "256x256", num_img: "1" };
 	}
 
 	onOpen() {
-		let { contentEl } = this;
+		const { contentEl } = this;
 		this.titleEl.setText("What can I do for you?");
 		const prompt_area = new Setting(contentEl).addText((text) =>
 			text.onChange((value) => {
@@ -39,8 +39,8 @@ export class PromptModal extends Modal {
 				})
 		);
 
-		if (this.is_img_modal)
-			submit_btn.addDropdown((dropdown) =>
+		if (this.is_img_modal) {
+			const img_size_select = submit_btn.addDropdown((dropdown) =>
 				dropdown
 					.addOptions({
 						"256x256": "256x256",
@@ -53,6 +53,19 @@ export class PromptModal extends Modal {
 					})
 			);
 
+			const select_choices = Array.from({ length: 10 }, (_, i) => ({
+				[`${i + 1}`]: `${i + 1}`,
+			})).reduce((a, b) => ({ ...a, ...b }), {});
+			img_size_select.addDropdown((dropdown) =>
+				dropdown
+					.addOptions(select_choices)
+					.setValue(this.param_dict["num_img"])
+					.onChange(async (value) => {
+						this.param_dict["num_img"] = value;
+					})
+			);
+		}
+
 		const input_prompt = this.modalEl.getElementsByTagName("input")[0];
 		input_prompt.addEventListener("keypress", (evt) => {
 			if (evt.key === "Enter" && this.param_dict["prompt_text"]) {
@@ -63,8 +76,7 @@ export class PromptModal extends Modal {
 	}
 
 	onClose() {
-		let { contentEl } = this;
-		contentEl.empty();
+		this.contentEl.empty();
 	}
 }
 
@@ -106,7 +118,7 @@ export class ChatModal extends Modal {
 	};
 
 	displayModalContent() {
-		let { contentEl } = this;
+		const { contentEl } = this;
 		const book = contentEl.createEl("div");
 
 		this.prompt_table.forEach((x) => {
@@ -184,7 +196,61 @@ export class ChatModal extends Modal {
 	}
 
 	onClose() {
-		let { contentEl } = this;
-		contentEl.empty();
+		this.contentEl.empty();
+	}
+}
+
+export class ImageModal extends Modal {
+	imageUrls: string[];
+	selectedImageUrls: string[];
+
+	constructor(app: App, imageUrls: string[], title: string) {
+		super(app);
+		this.imageUrls = imageUrls;
+		this.selectedImageUrls = [];
+		this.titleEl.setText(title);
+	}
+
+	onOpen() {
+		const container = this.contentEl.createEl("div", {
+			cls: "image-modal-container",
+		});
+
+		for (const imageUrl of this.imageUrls) {
+			const imgWrapper = container.createEl("div", {
+				cls: "image-modal-wrapper",
+			});
+
+			const img = imgWrapper.createEl("img", {
+				cls: "image-modal-image",
+			});
+			img.src = imageUrl;
+
+			img.addEventListener("click", async () => {
+				if (this.selectedImageUrls.includes(imageUrl)) {
+					this.selectedImageUrls = this.selectedImageUrls.filter(
+						(url) => url !== imageUrl
+					);
+					img.style.border = "none";
+				} else {
+					this.selectedImageUrls.push(imageUrl);
+					img.style.border = "2px solid blue";
+				}
+				try {
+					await navigator.clipboard.writeText(
+						this.selectedImageUrls
+							.map((x) => `![](${x})`)
+							.join("\n\n") + "\n"
+					);
+					new Notice("Images copied to clipboard");
+				} catch (e) {
+					new Notice("Error while copying images to clipboard");
+				}
+			});
+		}
+	}
+
+	onClose() {
+		this.contentEl.empty();
 	}
 }

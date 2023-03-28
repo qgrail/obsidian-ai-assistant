@@ -6,7 +6,7 @@ import {
 	PluginSettingTab,
 	Setting,
 } from "obsidian";
-import { PromptModal, ChatModal } from "./modal";
+import { PromptModal, ChatModal, ImageModal } from "./modal";
 import { OpenAI } from "./openai_api";
 
 interface AiAssistantSettings {
@@ -88,13 +88,16 @@ export default class AiAssistantPlugin extends Plugin {
 					async (prompt: { [key: string]: string }) => {
 						const answer = await this.openai.img_api_call(
 							prompt["prompt_text"],
-							prompt["img_size"]
+							prompt["img_size"],
+							parseInt(prompt["num_img"])
 						);
 						if (answer) {
-							editor.replaceRange(
-								`![${prompt["prompt_text"]}](${answer})`,
-								editor.getCursor()
+							const imageModal = new ImageModal(
+								this.app,
+								answer,
+								prompt["prompt_text"]
 							);
+							imageModal.open();
 						}
 					},
 					true
