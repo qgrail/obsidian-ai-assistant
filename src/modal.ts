@@ -1,4 +1,16 @@
-import { App, Modal, Notice, Setting } from "obsidian";
+import {
+	App,
+	FileSystemAdapter,
+	Modal,
+	Notice,
+	requestUrl,
+	Setting,
+} from "obsidian";
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const fs = require("fs");
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const path = require("path");
 
 const ROLES = ["user", "assistant"];
 
@@ -203,12 +215,19 @@ export class ChatModal extends Modal {
 export class ImageModal extends Modal {
 	imageUrls: string[];
 	selectedImageUrls: string[];
+	assetFolder: string;
 
-	constructor(app: App, imageUrls: string[], title: string) {
+	constructor(
+		app: App,
+		imageUrls: string[],
+		title: string,
+		assetFolder: string
+	) {
 		super(app);
 		this.imageUrls = imageUrls;
 		this.selectedImageUrls = [];
 		this.titleEl.setText(title);
+		this.assetFolder = assetFolder;
 	}
 
 	onOpen() {
@@ -236,21 +255,58 @@ export class ImageModal extends Modal {
 					this.selectedImageUrls.push(imageUrl);
 					img.style.border = "2px solid blue";
 				}
-				try {
-					await navigator.clipboard.writeText(
-						this.selectedImageUrls
-							.map((x) => `![](${x})`)
-							.join("\n\n") + "\n"
-					);
-					new Notice("Images copied to clipboard");
-				} catch (e) {
-					new Notice("Error while copying images to clipboard");
-				}
+				new Notice("Images copied to clipboard");
 			});
 		}
 	}
+	downloadImage = async (url: string, path: string) => {
+		const response = await requestUrl({ url: url });
+		await this.app.vault.adapter.writeBinary(path, response.arrayBuffer);
+	};
 
-	onClose() {
+	getImageName = (url: string) => {
+		return url.split("/").pop() + ".png";
+	};
+
+	saveImagesToVault = async (imageUrls: string[], folderPath: string) => {
+		for (const url of imageUrls) {
+			const imageName = this.getImageName(url); // Extract the image name from the URL
+			console.log("Image name");
+			console.log(imageName);
+			const savePath = path.join(folderPath, imageName); // Construct the save path in your vault
+			await this.downloadImage(url, savePath);
+		}
+	};
+
+	async onClose() {
+		if (this.selectedImageUrls.length > 0) {
+			if (app.vault.adapter instanceof FileSystemAdapter) {
+				const folderPath = path.join(
+					app.vault.adapter.getBasePath(),
+					this.assetFolder
+				);
+				if (!fs.existsSync(folderPath)) {
+					fs.mkdirSync(folderPath, { recursive: true });
+				}
+			}
+			try {
+				await this.saveImagesToVault(
+					this.selectedImageUrls,
+					this.assetFolder
+				);
+			} catch (e) {
+				new Notice("Error while downloading images");
+			}
+			try {
+				await navigator.clipboard.writeText(
+					this.selectedImageUrls
+						.map((x) => `![](${this.getImageName(x)})`)
+						.join("\n\n") + "\n"
+				);
+			} catch (e) {
+				new Notice("Error while copying images to clipboard");
+			}
+		}
 		this.contentEl.empty();
 	}
 }

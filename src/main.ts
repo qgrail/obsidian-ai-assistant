@@ -15,6 +15,7 @@ interface AiAssistantSettings {
 	modelName: string;
 	maxTokens: number;
 	replaceSelection: boolean;
+	imgFolder: string;
 }
 
 const DEFAULT_SETTINGS: AiAssistantSettings = {
@@ -23,6 +24,7 @@ const DEFAULT_SETTINGS: AiAssistantSettings = {
 	modelName: "gpt-3.5-turbo",
 	maxTokens: 500,
 	replaceSelection: true,
+	imgFolder: ".AiAssistant/Assets",
 };
 
 export default class AiAssistantPlugin extends Plugin {
@@ -95,7 +97,8 @@ export default class AiAssistantPlugin extends Plugin {
 							const imageModal = new ImageModal(
 								this.app,
 								answer,
-								prompt["prompt_text"]
+								prompt["prompt_text"],
+								this.settings.imgFolder
 							);
 							imageModal.open();
 						}
@@ -150,6 +153,7 @@ class AiAssistantSettingTab extends PluginSettingTab {
 						this.plugin.build_api();
 					})
 			);
+		containerEl.createEl("h3", { text: "Text assistant." });
 
 		new Setting(containerEl)
 			.setName("Model Name")
@@ -199,5 +203,22 @@ class AiAssistantSettingTab extends PluginSettingTab {
 						this.plugin.build_api();
 					});
 			});
+		containerEl.createEl("h3", { text: "Image assistant." });
+		new Setting(containerEl)
+			.setName("Image Folder")
+			.setDesc("Image Folder")
+			.addText((text) =>
+				text
+					.setPlaceholder("Enter the path to you image folder")
+					.setValue(this.plugin.settings.imgFolder)
+					.onChange(async (value) => {
+						if (value) {
+							this.plugin.settings.imgFolder = value;
+							await this.plugin.saveSettings();
+						} else {
+							new Notice("Image folder cannot be empty");
+						}
+					})
+			);
 	}
 }
