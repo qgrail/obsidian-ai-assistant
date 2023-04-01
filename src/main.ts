@@ -24,7 +24,7 @@ const DEFAULT_SETTINGS: AiAssistantSettings = {
 	modelName: "gpt-3.5-turbo",
 	maxTokens: 500,
 	replaceSelection: true,
-	imgFolder: ".AiAssistant/Assets",
+	imgFolder: "AiAssistant/Assets",
 };
 
 export default class AiAssistantPlugin extends Plugin {
@@ -153,7 +153,7 @@ class AiAssistantSettingTab extends PluginSettingTab {
 						this.plugin.build_api();
 					})
 			);
-		containerEl.createEl("h3", { text: "Text assistant." });
+		containerEl.createEl("h3", { text: "Text Assistant" });
 
 		new Setting(containerEl)
 			.setName("Model Name")
@@ -203,10 +203,10 @@ class AiAssistantSettingTab extends PluginSettingTab {
 						this.plugin.build_api();
 					});
 			});
-		containerEl.createEl("h3", { text: "Image assistant." });
+		containerEl.createEl("h3", { text: "Image Assistant" });
 		new Setting(containerEl)
-			.setName("Image Folder")
-			.setDesc("Image Folder")
+			.setName("Default location for generated images")
+			.setDesc("Where generated images are stored.")
 			.addText((text) =>
 				text
 					.setPlaceholder("Enter the path to you image folder")

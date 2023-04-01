@@ -32,14 +32,19 @@ export class PromptModal extends Modal {
 
 	onOpen() {
 		const { contentEl } = this;
-		this.titleEl.setText("What can I do for you?");
+		if (this.is_img_modal) {
+			this.titleEl.setText("What can I generate for you?");
+		} else {
+			this.titleEl.setText("What can I do for you?");
+		}
+
 		const prompt_area = new Setting(contentEl).addText((text) =>
 			text.onChange((value) => {
 				this.param_dict["prompt_text"] = value.trim();
 			})
 		);
 
-		const submit_btn = prompt_area.addButton((btn) =>
+		prompt_area.addButton((btn) =>
 			btn
 				.setButtonText("Submit")
 				.setCta()
@@ -51,33 +56,6 @@ export class PromptModal extends Modal {
 				})
 		);
 
-		if (this.is_img_modal) {
-			const img_size_select = submit_btn.addDropdown((dropdown) =>
-				dropdown
-					.addOptions({
-						"256x256": "256x256",
-						"512x512": "512x512",
-						"1024x1024": "1024x1024",
-					})
-					.setValue(this.param_dict["img_size"])
-					.onChange(async (value) => {
-						this.param_dict["img_size"] = value;
-					})
-			);
-
-			const select_choices = Array.from({ length: 10 }, (_, i) => ({
-				[`${i + 1}`]: `${i + 1}`,
-			})).reduce((a, b) => ({ ...a, ...b }), {});
-			img_size_select.addDropdown((dropdown) =>
-				dropdown
-					.addOptions(select_choices)
-					.setValue(this.param_dict["num_img"])
-					.onChange(async (value) => {
-						this.param_dict["num_img"] = value;
-					})
-			);
-		}
-
 		const input_prompt = this.modalEl.getElementsByTagName("input")[0];
 		input_prompt.addEventListener("keypress", (evt) => {
 			if (evt.key === "Enter" && this.param_dict["prompt_text"]) {
@@ -85,6 +63,67 @@ export class PromptModal extends Modal {
 				this.onSubmit(this.param_dict);
 			}
 		});
+
+		if (this.is_img_modal) {
+			const prompt_container = this.contentEl.createEl("div", {
+				cls: "prompt-modal-container",
+			});
+			this.contentEl.append(prompt_container);
+
+			const prompt_left_container = prompt_container.createEl("div", {
+				cls: "prompt-left-container",
+			});
+
+			const desc1 = prompt_left_container.createEl("p", {
+				cls: "description",
+			});
+			desc1.innerText = "Resolution";
+
+			const desc2 = prompt_left_container.createEl("p", {
+				cls: "description",
+			});
+			desc2.innerText = "Num images";
+
+			const prompt_right_container = prompt_container.createEl("div", {
+				cls: "prompt-right-container",
+			});
+
+			const resolution_dropdown =
+				prompt_right_container.createEl("select");
+			const options = ["256x256", "512x512", "1024x1024"];
+			options.forEach((option) => {
+				const optionEl = resolution_dropdown.createEl("option", {
+					text: option,
+				});
+				optionEl.value = option;
+				if (option === this.param_dict["img_size"]) {
+					optionEl.selected = true;
+				}
+			});
+			resolution_dropdown.addEventListener("change", (event) => {
+				const selectElement = event.target as HTMLSelectElement;
+				this.param_dict["img_size"] = selectElement.value;
+			});
+
+			const num_img_dropdown = prompt_right_container.createEl("select");
+			const num_choices = [...Array(10).keys()].map((x) =>
+				(x + 1).toString()
+			);
+
+			num_choices.forEach((option) => {
+				const optionEl = num_img_dropdown.createEl("option", {
+					text: option,
+				});
+				optionEl.value = option;
+				if (option === this.param_dict["num_img"]) {
+					optionEl.selected = true;
+				}
+			});
+			num_img_dropdown.addEventListener("change", (event) => {
+				const selectElement = event.target as HTMLSelectElement;
+				this.param_dict["num_img"] = selectElement.value;
+			});
+		}
 	}
 
 	onClose() {
@@ -167,27 +206,21 @@ export class ChatModal extends Modal {
 		);
 
 		const clear_button = new Setting(contentEl).addButton((btn) =>
-			btn
-				.setButtonText("Clear")
-				.setCta()
-				.onClick(() => {
-					this.prompt_table = [];
-					this.clearModalContent();
-					this.displayModalContent();
-				})
+			btn.setButtonText("Clear").onClick(() => {
+				this.prompt_table = [];
+				this.clearModalContent();
+				this.displayModalContent();
+			})
 		);
 
 		clear_button.addButton((btn) =>
-			btn
-				.setButtonText("Copy conversation")
-				.setCta()
-				.onClick(async () => {
-					const conversation = this.prompt_table
-						.map((x) => x["content"])
-						.join("\n\n");
-					await navigator.clipboard.writeText(conversation);
-					new Notice("Conversation copied to clipboard");
-				})
+			btn.setButtonText("Copy conversation").onClick(async () => {
+				const conversation = this.prompt_table
+					.map((x) => x["content"])
+					.join("\n\n");
+				await navigator.clipboard.writeText(conversation);
+				new Notice("Conversation copied to clipboard");
+			})
 		);
 	}
 
@@ -271,8 +304,6 @@ export class ImageModal extends Modal {
 	saveImagesToVault = async (imageUrls: string[], folderPath: string) => {
 		for (const url of imageUrls) {
 			const imageName = this.getImageName(url); // Extract the image name from the URL
-			console.log("Image name");
-			console.log(imageName);
 			const savePath = path.join(folderPath, imageName); // Construct the save path in your vault
 			await this.downloadImage(url, savePath);
 		}

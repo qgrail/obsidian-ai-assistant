@@ -24,3 +24,30 @@
 	max-height: 30vh;
 	object-fit: contain;
 }
+
+.prompt-modal-container {
+	display: flex;
+	flex-direction: row;
+	column-gap: 0.3em;
+	font-weight: 300;
+	font-style: italic;
+}
+
+.prompt-left-container {
+	display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+	align-items: flex-end;
+}
+
+.prompt-right-container {
+	display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+	row-gap: 0.1em;
+}
+
+.description{
+	margin-block-start: 0;
+    margin-block-end: 0;
+	}
