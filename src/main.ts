@@ -1,13 +1,12 @@
 import {
 	App,
 	Editor,
-	MarkdownView,
 	Notice,
 	Plugin,
 	PluginSettingTab,
 	Setting,
 } from "obsidian";
-import { PromptModal, ChatModal } from "./modal";
+import { PromptModal, ChatModal, ImageModal } from "./modal";
 import { OpenAI } from "./openai_api";
 
 interface AiAssistantSettings {
@@ -16,6 +15,7 @@ interface AiAssistantSettings {
 	modelName: string;
 	maxTokens: number;
 	replaceSelection: boolean;
+	imgFolder: string;
 }
 
 const DEFAULT_SETTINGS: AiAssistantSettings = {
@@ -24,6 +24,7 @@ const DEFAULT_SETTINGS: AiAssistantSettings = {
 	modelName: "gpt-3.5-turbo",
 	maxTokens: 500,
 	replaceSelection: true,
+	imgFolder: "AiAssistant/Assets",
 };
 
 export default class AiAssistantPlugin extends Plugin {
@@ -55,22 +56,55 @@ export default class AiAssistantPlugin extends Plugin {
 		this.addCommand({
 			id: "prompt-mode",
 			name: "Open Assistant Prompt",
-			editorCallback: async (editor: Editor, view: MarkdownView) => {
+			editorCallback: async (editor: Editor) => {
 				const selected_text = editor.getSelection().toString().trim();
-				new PromptModal(this.app, async (x) => {
-					let answer = await this.openai.api_call([
-						{
-							role: "user",
-							content: x.trim() + " : " + selected_text,
-						},
-					]);
-					if (!this.settings.replaceSelection) {
-						answer = selected_text + "\n" + answer.trim();
-					}
-					if (answer) {
-						editor.replaceSelection(answer.trim());
-					}
-				}).open();
+				new PromptModal(
+					this.app,
+					async (x: { [key: string]: string }) => {
+						let answer = await this.openai.api_call([
+							{
+								role: "user",
+								content:
+									x["prompt_text"] + " : " + selected_text,
+							},
+						]);
+						if (!this.settings.replaceSelection) {
+							answer = selected_text + "\n" + answer.trim();
+						}
+						if (answer) {
+							editor.replaceSelection(answer.trim());
+						}
+					},
+					false
+				).open();
+			},
+		});
+
+		// This adds an editor command that can perform some operation on the current editor instance
+		this.addCommand({
+			id: "img-generator",
+			name: "Open Image Generator",
+			editorCallback: async (editor: Editor) => {
+				new PromptModal(
+					this.app,
+					async (prompt: { [key: string]: string }) => {
+						const answer = await this.openai.img_api_call(
+							prompt["prompt_text"],
+							prompt["img_size"],
+							parseInt(prompt["num_img"])
+						);
+						if (answer) {
+							const imageModal = new ImageModal(
+								this.app,
+								answer,
+								prompt["prompt_text"],
+								this.settings.imgFolder
+							);
+							imageModal.open();
+						}
+					},
+					true
+				).open();
 			},
 		});
 
@@ -119,6 +153,7 @@ class AiAssistantSettingTab extends PluginSettingTab {
 						this.plugin.build_api();
 					})
 			);
+		containerEl.createEl("h3", { text: "Text Assistant" });
 
 		new Setting(containerEl)
 			.setName("Model Name")
@@ -127,7 +162,7 @@ class AiAssistantSettingTab extends PluginSettingTab {
 				dropdown
 					.addOptions({
 						"gpt-3.5-turbo": "gpt-3.5-turbo",
-						"gpt-4": "gpt-4"
+						"gpt-4": "gpt-4",
 					})
 					.setValue(this.plugin.settings.modelName)
 					.onChange(async (value) => {
@@ -168,5 +203,22 @@ class AiAssistantSettingTab extends PluginSettingTab {
 						this.plugin.build_api();
 					});
 			});
+		containerEl.createEl("h3", { text: "Image Assistant" });
+		new Setting(containerEl)
+			.setName("Default location for generated images")
+			.setDesc("Where generated images are stored.")
+			.addText((text) =>
+				text
+					.setPlaceholder("Enter the path to you image folder")
+					.setValue(this.plugin.settings.imgFolder)
+					.onChange(async (value) => {
+						if (value) {
+							this.plugin.settings.imgFolder = value;
+							await this.plugin.saveSettings();
+						} else {
+							new Notice("Image folder cannot be empty");
+						}
+					})
+			);
 	}
 }
