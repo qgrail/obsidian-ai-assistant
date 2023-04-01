@@ -1,11 +1,24 @@
+.chat-div {
+	padding-left: 0.5em;
+	padding-right: 0.5em;
+	border-radius: 1em;
+
+}
 
 .assistant {
-	font-weight: 500;
-	font-style: italic;
+	border: solid green;
 }
 
 .user {
-	font-weight: 200;
+	border: solid blue;
+}
+
+
+.chat-modal-container {
+	display: flex;
+	flex-direction: column;
+	row-gap: 0.5em;
+	margin-inside: 0.2em;
 }
 
 .image-modal-container {
