@@ -1,11 +1,35 @@
-
-.assistant {
-	font-weight: 500;
-	font-style: italic;
+.chat-modal-container .chat-div {
+	display: flex;
+	flex-direction: column;
+	padding-left: 1em;
+	padding-right: 1em;
+	max-width: 90%;
+	flex-wrap: wrap;
 }
 
-.user {
-	font-weight: 200;
+.chat-modal-container .assistant {
+	border: solid #740c1c;
+	align-self: start;
+	border-radius: 1em 2em 2em 1em
+}
+
+.chat-modal-container pre {
+    overflow: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.chat-modal-container .user {
+	border: solid #132c87;
+	align-self: end;
+	text-align: end;
+	border-radius: 2em 1em 1em 2em
+}
+
+.chat-modal-container {
+	display: flex;
+	flex-direction: column;
+	row-gap: 0.5em;
 }
 
 .image-modal-container {

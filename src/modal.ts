@@ -5,14 +5,14 @@ import {
 	Notice,
 	requestUrl,
 	Setting,
+	MarkdownRenderer,
+	MarkdownView,
 } from "obsidian";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const fs = require("fs");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const path = require("path");
-
-const ROLES = ["user", "assistant"];
 
 export class PromptModal extends Modal {
 	param_dict: { [key: string]: string };
@@ -168,20 +168,39 @@ export class ChatModal extends Modal {
 		}
 	};
 
-	displayModalContent() {
+	async displayModalContent() {
 		const { contentEl } = this;
-		const book = contentEl.createEl("div");
-
-		this.prompt_table.forEach((x) => {
-			book.createEl("p", {
-				text: x["content"],
-				cls: x["role"],
-			});
+		const container = this.contentEl.createEl("div", {
+			cls: "chat-modal-container",
 		});
+		const view = this.app.workspace.getActiveViewOfType(
+			MarkdownView
+		) as MarkdownView;
+
+		for (const x of this.prompt_table) {
+			const div = container.createEl("div", {
+				cls: `chat-div ${x["role"]}`,
+			});
+			if (x["role"] === "assistant") {
+				await MarkdownRenderer.renderMarkdown(
+					x["content"],
+					div,
+					"",
+					view
+				);
+			} else {
+				div.createEl("p", {
+					text: x["content"],
+				});
+			}
+			div.addEventListener("click", async () => {
+				await navigator.clipboard.writeText(x["content"]);
+				new Notice(x["content"] + " Copied to clipboard!");
+			});
+		}
 
 		const prompt_field = new Setting(contentEl)
 			.setName("Type here:")
-			.setClass("user")
 			.addText((text) => {
 				text.setPlaceholder("Your prompt here").onChange((value) => {
 					this.prompt_text = value.trim();
@@ -227,17 +246,6 @@ export class ChatModal extends Modal {
 	onOpen() {
 		this.titleEl.setText("What can I do for you?");
 		this.displayModalContent();
-		this.modalEl.addEventListener("click", async (event) => {
-			const target = event.target as HTMLElement;
-			if (
-				target &&
-				target.textContent &&
-				ROLES.includes(target.className)
-			) {
-				await navigator.clipboard.writeText(target.textContent.trim());
-				new Notice(target.textContent.trim() + " Copied to clipboard!");
-			}
-		});
 	}
 
 	onClose() {
