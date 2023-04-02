@@ -14,8 +14,6 @@ const fs = require("fs");
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const path = require("path");
 
-const ROLES = ["user", "assistant"];
-
 export class PromptModal extends Modal {
 	param_dict: { [key: string]: string };
 	onSubmit: (input_dict: object) => void;
@@ -195,6 +193,10 @@ export class ChatModal extends Modal {
 					text: x["content"],
 				});
 			}
+			div.addEventListener("click", async () => {
+				await navigator.clipboard.writeText(x["content"]);
+				new Notice(x["content"] + " Copied to clipboard!");
+			});
 		}
 
 		const prompt_field = new Setting(contentEl)
@@ -244,17 +246,6 @@ export class ChatModal extends Modal {
 	onOpen() {
 		this.titleEl.setText("What can I do for you?");
 		this.displayModalContent();
-		this.modalEl.addEventListener("click", async (event) => {
-			const target = event.target as HTMLElement;
-			if (
-				target &&
-				target.textContent &&
-				ROLES.includes(target.className)
-			) {
-				await navigator.clipboard.writeText(target.textContent.trim());
-				new Notice(target.textContent.trim() + " Copied to clipboard!");
-			}
-		});
 	}
 
 	onClose() {
