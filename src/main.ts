@@ -212,8 +212,9 @@ class AiAssistantSettingTab extends PluginSettingTab {
 					.setPlaceholder("Enter the path to you image folder")
 					.setValue(this.plugin.settings.imgFolder)
 					.onChange(async (value) => {
-						if (value) {
-							this.plugin.settings.imgFolder = value;
+						const path = value.replace(/\/+$/, "");
+						if (path) {
+							this.plugin.settings.imgFolder = path;
 							await this.plugin.saveSettings();
 						} else {
 							new Notice("Image folder cannot be empty");

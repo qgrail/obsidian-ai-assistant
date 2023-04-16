@@ -1,6 +1,5 @@
 import {
 	App,
-	FileSystemAdapter,
 	Modal,
 	Notice,
 	requestUrl,
@@ -8,11 +7,6 @@ import {
 	MarkdownRenderer,
 	MarkdownView,
 } from "obsidian";
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const fs = require("fs");
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const path = require("path");
 
 export class PromptModal extends Modal {
 	param_dict: { [key: string]: string };
@@ -164,7 +158,7 @@ export class ChatModal extends Modal {
 			}
 
 			this.clearModalContent();
-			this.displayModalContent();
+			await this.displayModalContent();
 		}
 	};
 
@@ -312,20 +306,18 @@ export class ImageModal extends Modal {
 	saveImagesToVault = async (imageUrls: string[], folderPath: string) => {
 		for (const url of imageUrls) {
 			const imageName = this.getImageName(url); // Extract the image name from the URL
-			const savePath = path.join(folderPath, imageName); // Construct the save path in your vault
+			const savePath = folderPath + "/" + imageName; // Construct the save path in your vault
 			await this.downloadImage(url, savePath);
 		}
 	};
 
 	async onClose() {
 		if (this.selectedImageUrls.length > 0) {
-			if (app.vault.adapter instanceof FileSystemAdapter) {
-				const folderPath = path.join(
-					app.vault.adapter.getBasePath(),
-					this.assetFolder
-				);
-				if (!fs.existsSync(folderPath)) {
-					fs.mkdirSync(folderPath, { recursive: true });
+			if (!app.vault.getAbstractFileByPath(this.assetFolder)) {
+				try {
+					await app.vault.createFolder(this.assetFolder);
+				} catch (error) {
+					console.error("Error creating directory:", error);
 				}
 			}
 			try {
