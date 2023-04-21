@@ -32,7 +32,8 @@ Generate images for your notes.
 
 ## Settings
 ### Text Assistant
-- **Model choice**: choice of the text model. Currently `gpt-3.5-turbo` and `gpt-4` are supported.
+- **Model choice**: choice of the text model. Currently `gpt-3.5-turbo` and `gpt-4` are supported. (There is still a 
+[waitlist](https://openai.com/waitlist/gpt-4-api) to access GPT-4. If you have not been invited, GPT-4 will not work here.)
 - **Maximum number of tokens** in the generated answer
 - **Replace or Add below**: In prompt mode, after having selected text from your note and enter your prompt, 
 you can decide to replace your text by the assistant answer or to paste it bellow.
