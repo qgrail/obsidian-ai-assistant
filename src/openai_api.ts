@@ -1,5 +1,6 @@
 import { Notice } from "obsidian";
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { Configuration, OpenAIApi } = require("openai");
 
 export class OpenAI {
@@ -24,7 +25,7 @@ export class OpenAI {
 			});
 			return completion.data.choices[0].message.content;
 		} catch (err) {
-			new Notice("Error in API call !");
+			new Notice(err);
 		}
 	};
 
@@ -41,7 +42,7 @@ export class OpenAI {
 			});
 			return response.data.data.map((x: any) => x.url);
 		} catch (err) {
-			new Notice("Error in API call !");
+			new Notice(err);
 		}
 	};
 }
