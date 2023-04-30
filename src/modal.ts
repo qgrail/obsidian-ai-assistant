@@ -6,6 +6,7 @@ import {
 	Setting,
 	MarkdownRenderer,
 	MarkdownView,
+	Editor,
 } from "obsidian";
 
 export class PromptModal extends Modal {
@@ -337,6 +338,134 @@ export class ImageModal extends Modal {
 			} catch (e) {
 				new Notice("Error while copying images to clipboard");
 			}
+		}
+		this.contentEl.empty();
+	}
+}
+
+export class SpeechModal extends Modal {
+	recorder: MediaRecorder;
+	gumStream: MediaStream;
+	openai: any;
+	editor: Editor;
+	is_cancelled: boolean;
+	language: string;
+
+	constructor(app: App, openai: any, language: string, editor: Editor) {
+		super(app);
+		this.openai = openai;
+		this.language = language;
+		this.editor = editor;
+		this.is_cancelled = false;
+	}
+
+	stopRecording = () => {
+		this.recorder.stop();
+		//stop microphone access
+		if (this.gumStream) {
+			this.gumStream.getAudioTracks()[0].stop();
+		}
+	};
+
+	start_recording = async (
+		constraints: MediaStreamConstraints,
+		extension: string
+	) => {
+		try {
+			let chunks: Blob[] = [];
+			this.gumStream = await navigator.mediaDevices.getUserMedia(
+				constraints
+			);
+
+			const options = {
+				audioBitsPerSecond: 256000,
+				mimeType: "audio/" + extension + ";codecs=opus",
+			};
+			this.recorder = new MediaRecorder(this.gumStream, options);
+
+			this.recorder.ondataavailable = async (e: BlobEvent) => {
+				chunks.push(e.data);
+				if (this.recorder.state == "inactive" && !this.is_cancelled) {
+					const audio = new File(chunks, "tmp." + extension, {
+						type: "audio/" + extension,
+					});
+					const answer = await this.openai.whisper_api_call(
+						audio,
+						this.language
+					);
+
+					if (answer) {
+						this.editor.replaceRange(
+							answer,
+							this.editor.getCursor()
+						);
+						const newPos = {
+							line: this.editor.getCursor().line,
+							ch: this.editor.getCursor().ch + answer.length,
+						};
+						this.editor.setCursor(newPos.line, newPos.ch);
+					}
+					this.close();
+				}
+			};
+			this.recorder.start(1000);
+			chunks = [];
+		} catch (err) {
+			new Notice(err);
+		}
+	};
+
+	async onOpen() {
+		const { contentEl } = this;
+		this.titleEl.setText("Speech to Text");
+
+		let extension: string;
+		if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+			extension = "webm";
+		} else {
+			extension = "ogg";
+		}
+
+		const constraints = { audio: true };
+
+		const button_container = contentEl.createEl("div", {
+			cls: "speech-modal-container",
+		});
+
+		const record_button = button_container.createEl("button", {
+			text: "Start Recording",
+			cls: "record-button",
+		});
+
+		record_button.addEventListener("click", () => {
+			if (this.recorder && this.recorder.state === "recording") {
+				new Notice("Stop recording");
+				record_button.disabled = true;
+				this.titleEl.setText("Processing record");
+				this.stopRecording();
+			} else {
+				new Notice("Start recording");
+				record_button.setText("Stop Recording");
+				record_button.style.borderColor = "red";
+				this.titleEl.setText("Listening...");
+				this.start_recording(constraints, extension);
+			}
+		});
+
+		const cancel_button = button_container.createEl("button", {
+			text: "Cancel",
+		});
+
+		cancel_button.addEventListener("click", (e) => {
+			this.is_cancelled = true;
+			this.close();
+		});
+	}
+
+	async onClose() {
+		if (this.recorder && this.recorder.state === "recording") {
+			new Notice("Stop recording");
+			this.stopRecording();
 		}
 		this.contentEl.empty();
 	}

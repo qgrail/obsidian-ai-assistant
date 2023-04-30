@@ -1,7 +1,12 @@
 # Obsidian AI Assistant
 
-Simple plugin to enable interactions with AI models such as [OpenAI ChatGPT](https://openai.com/blog/chatgpt), [OpenAI DALL·E2](https://openai.com/product/dall-e-2)
+Simple plugin to enable interactions with AI models such as [OpenAI ChatGPT](https://openai.com/blog/chatgpt), [OpenAI DALL·E2](https://openai.com/product/dall-e-2), [OpenAI Whisper](https://openai.com/research/whisper)
 directly from your [Obsidian](https://obsidian.md/) notes.
+
+The current available features of this plugin are:
+- [Text assistant with GPT-3.5 and GPT-4](### Text Assistant),
+- [Image generation with DALL·E2](### Image Assistant),
+- [Speech to text with Whisper](### Speech to text).
 
 ## How to use
 
@@ -26,9 +31,17 @@ Prompt mode allows you to use a selected piece of text from your note as input f
 From here you can ask the assistant to translate, summarize, generate code ect.
 
 ### Image Assistant
-Generate images for your notes.
+Generate images for your notes.\
+In the result window, select the images you want to keep.\
+They will automatically be downloaded to your vault and their path copied to your clipboard.\
+Then, you can paste the images anywhere in your notes.
 
 <img src="gifs/image_generator.gif" alt= “” width="55%">
+
+### Speech to Text
+Launch the Speech to Text command and start dictating your notes.\
+The transcript will be immediately added to your note at your cursor location.
+
 
 ## Settings
 ### Text Assistant
@@ -41,6 +54,11 @@ you can decide to replace your text by the assistant answer or to paste it bello
 ### Image Assistant
 - The model used is **DALL·E2**,
 - Change the default folder of generated images. 
+
+### Speech to Text
+- The model used is **Whisper**,
+- You can change the default **language** to improve the accuracy and latency of the model. If you leave it empty, the model will automatically detect it.
+
 
 ## How to install
 
