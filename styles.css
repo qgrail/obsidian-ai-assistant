@@ -71,6 +71,17 @@
 	row-gap: 0.1em;
 }
 
+.speech-modal-container{
+	display: flex;
+	justify-content: space-around;
+}
+
+.record-button{
+	border-color: green;
+	border-width: 0.3em;
+	border-style: solid;
+}
+
 .description{
 	margin-block-start: 0;
     margin-block-end: 0;

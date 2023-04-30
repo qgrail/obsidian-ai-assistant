@@ -6,7 +6,7 @@ import {
 	PluginSettingTab,
 	Setting,
 } from "obsidian";
-import { PromptModal, ChatModal, ImageModal } from "./modal";
+import { PromptModal, ChatModal, ImageModal, SpeechModal } from "./modal";
 import { OpenAI } from "./openai_api";
 
 interface AiAssistantSettings {
@@ -16,6 +16,7 @@ interface AiAssistantSettings {
 	maxTokens: number;
 	replaceSelection: boolean;
 	imgFolder: string;
+	language: string;
 }
 
 const DEFAULT_SETTINGS: AiAssistantSettings = {
@@ -25,6 +26,7 @@ const DEFAULT_SETTINGS: AiAssistantSettings = {
 	maxTokens: 500,
 	replaceSelection: true,
 	imgFolder: "AiAssistant/Assets",
+	language: "",
 };
 
 export default class AiAssistantPlugin extends Plugin {
@@ -43,7 +45,6 @@ export default class AiAssistantPlugin extends Plugin {
 		await this.loadSettings();
 		this.build_api();
 
-		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
 			id: "chat-mode",
 			name: "Open Assistant Chat",
@@ -52,7 +53,6 @@ export default class AiAssistantPlugin extends Plugin {
 			},
 		});
 
-		// This adds an editor command that can perform some operation on the current editor instance
 		this.addCommand({
 			id: "prompt-mode",
 			name: "Open Assistant Prompt",
@@ -80,7 +80,6 @@ export default class AiAssistantPlugin extends Plugin {
 			},
 		});
 
-		// This adds an editor command that can perform some operation on the current editor instance
 		this.addCommand({
 			id: "img-generator",
 			name: "Open Image Generator",
@@ -104,6 +103,19 @@ export default class AiAssistantPlugin extends Plugin {
 						}
 					},
 					true
+				).open();
+			},
+		});
+
+		this.addCommand({
+			id: "speech-to-text",
+			name: "Open Speech to Text",
+			editorCallback: (editor: Editor) => {
+				new SpeechModal(
+					this.app,
+					this.openai,
+					this.settings.language,
+					editor
 				).open();
 			},
 		});
@@ -219,6 +231,19 @@ class AiAssistantSettingTab extends PluginSettingTab {
 						} else {
 							new Notice("Image folder cannot be empty");
 						}
+					})
+			);
+
+		containerEl.createEl("h3", { text: "Speech to Text" });
+		new Setting(containerEl)
+			.setName("The language of the input audio")
+			.setDesc("Using ISO-639-1 format (en, fr, de, ...)")
+			.addText((text) =>
+				text
+					.setValue(this.plugin.settings.language)
+					.onChange(async (value) => {
+						this.plugin.settings.language = value;
+						await this.plugin.saveSettings();
 					})
 			);
 	}
