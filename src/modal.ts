@@ -130,10 +130,12 @@ export class ChatModal extends Modal {
 	prompt_text: string;
 	prompt_table: { [key: string]: string }[] = [];
 	openai: any;
+	is_generating_answer: boolean;
 
 	constructor(app: App, openai: any) {
 		super(app);
 		this.openai = openai;
+		this.is_generating_answer = false;
 	}
 
 	clearModalContent() {
@@ -142,17 +144,25 @@ export class ChatModal extends Modal {
 	}
 
 	send_action = async () => {
-		if (this.prompt_text) {
+		if (this.prompt_text && !this.is_generating_answer) {
+			this.is_generating_answer = true;
 			const prompt = {
 				role: "user",
 				content: this.prompt_text,
 			};
 
-			const answer = await this.openai.api_call(
-				this.prompt_table.concat(prompt)
-			);
+			this.prompt_table.push(prompt, {
+				role: "assistant",
+				content: "Generating answer...",
+			});
+
+			this.clearModalContent();
+			await this.displayModalContent();
+
+			this.prompt_table.pop();
+			const answer = await this.openai.api_call(this.prompt_table);
 			if (answer) {
-				this.prompt_table.push(prompt, {
+				this.prompt_table.push({
 					role: "assistant",
 					content: answer,
 				});
@@ -160,6 +170,7 @@ export class ChatModal extends Modal {
 
 			this.clearModalContent();
 			await this.displayModalContent();
+			this.is_generating_answer = false;
 		}
 	};
 
