@@ -61,6 +61,11 @@ you can decide to replace your text by the assistant answer or to paste it bello
 
 ## How to install
 
+#### From the community plugins
+
+You can install the [AI Assistant](https://obsidian.md/plugins?id=ai-assistant) directly from the Obsidian community plugins.
+
+#### Get latest version from git
 1. `cd path/to/vault/.obsidian/plugins`
 2. `git clone https://github.com/qgrail/obsidian-ai-assistant.git && cd obsidian-ai-assistant`
 3. `npm install && npm run build`
