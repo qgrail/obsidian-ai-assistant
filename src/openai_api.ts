@@ -2,7 +2,6 @@ import { MarkdownRenderer, MarkdownView, Notice } from "obsidian";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { Configuration, OpenAIApi } = require("openai");
-import { Readable } from "stream";
 
 class CustomFormData extends FormData {
 	getHeaders() {

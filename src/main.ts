@@ -6,7 +6,7 @@ import {
 	PluginSettingTab,
 	Setting,
 } from "obsidian";
-import { PromptModal, ChatModal, ImageModal, SpeechModal } from "./modal";
+import { ChatModal, ImageModal, PromptModal, SpeechModal } from "./modal";
 import { OpenAI } from "./openai_api";
 
 interface AiAssistantSettings {

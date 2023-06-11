@@ -1,14 +1,14 @@
 import {
 	App,
+	Editor,
+	MarkdownRenderer,
+	MarkdownView,
 	Modal,
 	Notice,
 	requestUrl,
 	Setting,
-	MarkdownRenderer,
-	MarkdownView,
-	Editor,
 } from "obsidian";
-import { IncomingMessage } from "http";
+
 export class PromptModal extends Modal {
 	param_dict: { [key: string]: string };
 	onSubmit: (input_dict: object) => void;
