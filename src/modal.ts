@@ -1,12 +1,12 @@
 import {
 	App,
+	Editor,
+	MarkdownRenderer,
+	MarkdownView,
 	Modal,
 	Notice,
 	requestUrl,
 	Setting,
-	MarkdownRenderer,
-	MarkdownView,
-	Editor,
 } from "obsidian";
 
 export class PromptModal extends Modal {
@@ -153,14 +153,22 @@ export class ChatModal extends Modal {
 
 			this.prompt_table.push(prompt, {
 				role: "assistant",
-				content: "Generating answer...",
 			});
 
 			this.clearModalContent();
 			await this.displayModalContent();
 
 			this.prompt_table.pop();
-			const answer = await this.openai.api_call(this.prompt_table);
+			const answers =
+				this.modalEl.getElementsByClassName("chat-div assistant");
+			const view = this.app.workspace.getActiveViewOfType(
+				MarkdownView
+			) as MarkdownView;
+			const answer = await this.openai.api_call(
+				this.prompt_table,
+				answers[answers.length - 1],
+				view
+			);
 			if (answer) {
 				this.prompt_table.push({
 					role: "assistant",

@@ -6,7 +6,7 @@ import {
 	PluginSettingTab,
 	Setting,
 } from "obsidian";
-import { PromptModal, ChatModal, ImageModal, SpeechModal } from "./modal";
+import { ChatModal, ImageModal, PromptModal, SpeechModal } from "./modal";
 import { OpenAI } from "./openai_api";
 
 interface AiAssistantSettings {
@@ -68,6 +68,7 @@ export default class AiAssistantPlugin extends Plugin {
 									x["prompt_text"] + " : " + selected_text,
 							},
 						]);
+						answer = answer!;
 						if (!this.settings.replaceSelection) {
 							answer = selected_text + "\n" + answer.trim();
 						}
