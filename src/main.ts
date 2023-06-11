@@ -68,6 +68,7 @@ export default class AiAssistantPlugin extends Plugin {
 									x["prompt_text"] + " : " + selected_text,
 							},
 						]);
+						answer = answer!;
 						if (!this.settings.replaceSelection) {
 							answer = selected_text + "\n" + answer.trim();
 						}
