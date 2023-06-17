@@ -78,4 +78,4 @@ To use this plugin, you need an official API key from [OpenAI](https://platform.
 
 ## Limitations
 
-This plugin is currently not comparible with iPadOS.
+This plugin is currently not compatible with iPadOS.
