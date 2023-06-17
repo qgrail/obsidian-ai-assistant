@@ -76,3 +76,6 @@ You can install the [AI Assistant](https://obsidian.md/plugins?id=ai-assistant) 
 
 To use this plugin, you need an official API key from [OpenAI](https://platform.openai.com/account/api-keys).
 
+## Limitations
+
+This plugin is currently not comparible with iPadOS.
