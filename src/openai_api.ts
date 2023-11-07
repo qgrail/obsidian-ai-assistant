@@ -136,7 +136,7 @@ export class OpenAIAssistant {
 				model: "whisper-1",
 				language: language,
 			});
-			return completion.data.text;
+			return completion.text;
 		} catch (err) {
 			new Notice("## OpenAI API ## " + err);
 		}
