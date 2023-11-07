@@ -417,7 +417,7 @@ export class SpeechModal extends Modal {
 
 	start_recording = async (
 		constraints: MediaStreamConstraints,
-		extension: string
+		mimeType: string
 	) => {
 		try {
 			let chunks: Blob[] = [];
@@ -427,16 +427,20 @@ export class SpeechModal extends Modal {
 
 			const options = {
 				audioBitsPerSecond: 256000,
-				mimeType: "audio/" + extension + ";codecs=opus",
+				mimeType: mimeType,
 			};
 			this.recorder = new MediaRecorder(this.gumStream, options);
 
 			this.recorder.ondataavailable = async (e: BlobEvent) => {
 				chunks.push(e.data);
 				if (this.recorder.state == "inactive" && !this.is_cancelled) {
-					const audio = new File(chunks, "tmp." + extension, {
-						type: "audio/" + extension,
-					});
+					const audio = new File(
+						chunks,
+						"tmp." + mimeType.split("/").at(-1),
+						{
+							type: mimeType,
+						}
+					);
 					const answer = await this.openai.whisper_api_call(
 						audio,
 						this.language
@@ -467,11 +471,12 @@ export class SpeechModal extends Modal {
 		const { contentEl } = this;
 		this.titleEl.setText("Speech to Text");
 
-		let extension: string;
-		if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
-			extension = "webm";
+		let mimeType: string;
+		if (MediaRecorder.isTypeSupported("audio/webm")) {
+			mimeType = "audio/webm";
 		} else {
-			extension = "ogg";
+			// Only compatible mimetype for ios
+			mimeType = "video/mp4";
 		}
 
 		const constraints = { audio: true };
@@ -496,7 +501,7 @@ export class SpeechModal extends Modal {
 				record_button.setText("Stop Recording");
 				record_button.style.borderColor = "red";
 				this.titleEl.setText("Listening...");
-				this.start_recording(constraints, extension);
+				this.start_recording(constraints, mimeType);
 			}
 		});
 
