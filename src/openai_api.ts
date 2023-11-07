@@ -2,11 +2,11 @@ import { MarkdownRenderer, MarkdownView, Notice } from "obsidian";
 
 import { OpenAI } from "openai";
 
-class CustomFormData extends FormData {
-	getHeaders() {
-		return {};
-	}
-}
+// class CustomFormData extends FormData {
+// 	getHeaders() {
+// 		return {};
+// 	}
+// }
 
 export class OpenAIAssistant {
 	modelName: string;
@@ -108,16 +108,21 @@ export class OpenAIAssistant {
 		model: string,
 		prompt: string,
 		img_size: string,
-		num_img: number
+		num_img: number,
+		is_hd: boolean
 	) => {
 		try {
-			const response = await this.apiFun.images.generate({
-				model: model,
-				prompt: prompt,
-				n: num_img,
-				size: img_size,
-			});
-			console.log(response.data);
+			const params: { [key: string]: string | number } = {};
+			params.model = model;
+			params.prompt = prompt;
+			params.n = num_img;
+			params.size = img_size;
+
+			if (model === "dall-e-3" && is_hd) {
+				params.quality = "hd";
+			}
+
+			const response = await this.apiFun.images.generate(params);
 			return response.data.map((x: any) => x.url);
 		} catch (err) {
 			new Notice("## OpenAI API ## " + err);

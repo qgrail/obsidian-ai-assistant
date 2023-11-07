@@ -13,19 +13,21 @@ export class PromptModal extends Modal {
 	param_dict: { [key: string]: string };
 	onSubmit: (input_dict: object) => void;
 	is_img_modal: boolean;
+	settings: { [key: string]: string };
 
 	constructor(
 		app: App,
 		onSubmit: (x: object) => void,
-		is_img_modal: boolean
+		is_img_modal: boolean,
+		settings: { [key: string]: string }
 	) {
 		super(app);
 		this.onSubmit = onSubmit;
+		this.settings = settings;
 		this.is_img_modal = is_img_modal;
 		this.param_dict = {
-			img_size: "256x256",
 			num_img: "1",
-			model: "dall-e-2",
+			is_hd: "true",
 		};
 	}
 
@@ -74,44 +76,25 @@ export class PromptModal extends Modal {
 			});
 
 			const desc1 = prompt_left_container.createEl("p", {
-				cls: "model",
-			});
-			desc1.innerText = "Model";
-
-			const desc2 = prompt_left_container.createEl("p", {
 				cls: "description",
 			});
-			desc2.innerText = "Resolution";
-
-			const desc3 = prompt_left_container.createEl("p", {
-				cls: "description",
-			});
-			desc3.innerText = "Num images";
+			desc1.innerText = "Resolution";
 
 			const prompt_right_container = prompt_container.createEl("div", {
 				cls: "prompt-right-container",
 			});
 
-			const model_dropdown = prompt_right_container.createEl("select");
-			const model_options = ["dall-e-2", "dall-e-3"];
-			model_options.forEach((option) => {
-				const optionEl = model_dropdown.createEl("option", {
-					text: option,
-				});
-				optionEl.value = option;
-				if (option === this.param_dict["model"]) {
-					optionEl.selected = true;
-				}
-			});
-
-			model_dropdown.addEventListener("change", (event) => {
-				const selectElement = event.target as HTMLSelectElement;
-				this.param_dict["model"] = selectElement.value;
-			});
-
 			const resolution_dropdown =
 				prompt_right_container.createEl("select");
-			const options = ["256x256", "512x512", "1024x1024"];
+
+			let options = ["256x256", "512x512", "1024x1024"];
+			this.param_dict["img_size"] = "256x256";
+
+			if (this.settings["model"] === "dall-e-3") {
+				options = ["1024x1024", "1792x1024", "1024x1792"];
+				this.param_dict["img_size"] = "1024x1024";
+			}
+
 			options.forEach((option) => {
 				const optionEl = resolution_dropdown.createEl("option", {
 					text: option,
@@ -126,24 +109,44 @@ export class PromptModal extends Modal {
 				this.param_dict["img_size"] = selectElement.value;
 			});
 
-			const num_img_dropdown = prompt_right_container.createEl("select");
-			const num_choices = [...Array(10).keys()].map((x) =>
-				(x + 1).toString()
-			);
-
-			num_choices.forEach((option) => {
-				const optionEl = num_img_dropdown.createEl("option", {
-					text: option,
+			if (this.settings["model"] === "dall-e-2") {
+				const desc2 = prompt_left_container.createEl("p", {
+					cls: "description",
 				});
-				optionEl.value = option;
-				if (option === this.param_dict["num_img"]) {
-					optionEl.selected = true;
-				}
-			});
-			num_img_dropdown.addEventListener("change", (event) => {
-				const selectElement = event.target as HTMLSelectElement;
-				this.param_dict["num_img"] = selectElement.value;
-			});
+				desc2.innerText = "Num images";
+
+				const num_img_dropdown =
+					prompt_right_container.createEl("select");
+				const num_choices = [...Array(10).keys()].map((x) =>
+					(x + 1).toString()
+				);
+				num_choices.forEach((option) => {
+					const optionEl = num_img_dropdown.createEl("option", {
+						text: option,
+					});
+					optionEl.value = option;
+					if (option === this.param_dict["num_img"]) {
+						optionEl.selected = true;
+					}
+				});
+				num_img_dropdown.addEventListener("change", (event) => {
+					const selectElement = event.target as HTMLSelectElement;
+					this.param_dict["num_img"] = selectElement.value;
+				});
+			}
+			if (this.settings["model"] === "dall-e-3") {
+				const desc2 = prompt_left_container.createEl("p", {
+					cls: "description",
+				});
+				desc2.innerText = "HD?";
+				const is_hd = prompt_right_container.createEl("input", {
+					type: "checkbox",
+				});
+				is_hd.checked = this.param_dict["is_hd"] === "true";
+				is_hd.addEventListener("change", (event) => {
+					this.param_dict["is_hd"] = is_hd.checked.toString();
+				});
+			}
 		}
 	}
 
