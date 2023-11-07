@@ -7,7 +7,7 @@ import {
 	Setting,
 } from "obsidian";
 import { ChatModal, ImageModal, PromptModal, SpeechModal } from "./modal";
-import { OpenAI } from "./openai_api";
+import { OpenAIAssistant } from "./openai_api";
 
 interface AiAssistantSettings {
 	mySetting: string;
@@ -31,10 +31,10 @@ const DEFAULT_SETTINGS: AiAssistantSettings = {
 
 export default class AiAssistantPlugin extends Plugin {
 	settings: AiAssistantSettings;
-	openai: OpenAI;
+	openai: OpenAIAssistant;
 
 	build_api() {
-		this.openai = new OpenAI(
+		this.openai = new OpenAIAssistant(
 			this.settings.apiKey,
 			this.settings.modelName,
 			this.settings.maxTokens
@@ -88,7 +88,13 @@ export default class AiAssistantPlugin extends Plugin {
 				new PromptModal(
 					this.app,
 					async (prompt: { [key: string]: string }) => {
+						if (prompt["model"] === "dall-e-3") {
+							prompt["img_size"] = "1024x1024";
+							prompt["num_img"] = "1";
+						}
+
 						const answer = await this.openai.img_api_call(
+							prompt["model"],
 							prompt["prompt_text"],
 							prompt["img_size"],
 							parseInt(prompt["num_img"])

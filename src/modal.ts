@@ -22,7 +22,11 @@ export class PromptModal extends Modal {
 		super(app);
 		this.onSubmit = onSubmit;
 		this.is_img_modal = is_img_modal;
-		this.param_dict = { img_size: "256x256", num_img: "1" };
+		this.param_dict = {
+			img_size: "256x256",
+			num_img: "1",
+			model: "dall-e-2",
+		};
 	}
 
 	onOpen() {
@@ -70,17 +74,39 @@ export class PromptModal extends Modal {
 			});
 
 			const desc1 = prompt_left_container.createEl("p", {
-				cls: "description",
+				cls: "model",
 			});
-			desc1.innerText = "Resolution";
+			desc1.innerText = "Model";
 
 			const desc2 = prompt_left_container.createEl("p", {
 				cls: "description",
 			});
-			desc2.innerText = "Num images";
+			desc2.innerText = "Resolution";
+
+			const desc3 = prompt_left_container.createEl("p", {
+				cls: "description",
+			});
+			desc3.innerText = "Num images";
 
 			const prompt_right_container = prompt_container.createEl("div", {
 				cls: "prompt-right-container",
+			});
+
+			const model_dropdown = prompt_right_container.createEl("select");
+			const model_options = ["dall-e-2", "dall-e-3"];
+			model_options.forEach((option) => {
+				const optionEl = model_dropdown.createEl("option", {
+					text: option,
+				});
+				optionEl.value = option;
+				if (option === this.param_dict["model"]) {
+					optionEl.selected = true;
+				}
+			});
+
+			model_dropdown.addEventListener("change", (event) => {
+				const selectElement = event.target as HTMLSelectElement;
+				this.param_dict["model"] = selectElement.value;
 			});
 
 			const resolution_dropdown =

@@ -1,7 +1,6 @@
 import { MarkdownRenderer, MarkdownView, Notice } from "obsidian";
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { Configuration, OpenAIApi } = require("openai");
+import { OpenAI } from "openai";
 
 class CustomFormData extends FormData {
 	getHeaders() {
@@ -9,18 +8,17 @@ class CustomFormData extends FormData {
 	}
 }
 
-export class OpenAI {
+export class OpenAIAssistant {
 	modelName: string;
 	apiFun: any;
 	maxTokens: number;
 	apiKey: string;
 
 	constructor(apiKey: string, modelName: string, maxTokens: number) {
-		const configuration = new Configuration({
+		this.apiFun = new OpenAI({
 			apiKey: apiKey,
-			formDataCtor: CustomFormData,
+			dangerouslyAllowBrowser: true,
 		});
-		this.apiFun = new OpenAIApi(configuration);
 		this.modelName = modelName;
 		this.maxTokens = maxTokens;
 		this.apiKey = apiKey;
@@ -107,17 +105,20 @@ export class OpenAI {
 	};
 
 	img_api_call = async (
+		model: string,
 		prompt: string,
 		img_size: string,
 		num_img: number
 	) => {
 		try {
-			const response = await this.apiFun.createImage({
+			const response = await this.apiFun.images.generate({
+				model: model,
 				prompt: prompt,
 				n: num_img,
 				size: img_size,
 			});
-			return response.data.data.map((x: any) => x.url);
+			console.log(response.data);
+			return response.data.map((x: any) => x.url);
 		} catch (err) {
 			new Notice("## OpenAI API ## " + err);
 		}
@@ -125,14 +126,11 @@ export class OpenAI {
 
 	whisper_api_call = async (input: Blob, language: string) => {
 		try {
-			const completion = await this.apiFun.createTranscription(
-				input,
-				"whisper-1",
-				undefined,
-				undefined,
-				undefined,
-				language
-			);
+			const completion = await this.apiFun.audio.transcriptions.create({
+				file: input,
+				model: "whisper-1",
+				language: language,
+			});
 			return completion.data.text;
 		} catch (err) {
 			new Notice("## OpenAI API ## " + err);
