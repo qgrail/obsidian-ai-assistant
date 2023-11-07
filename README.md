@@ -1,10 +1,10 @@
 # Obsidian AI Assistant
 
-Simple plugin to enable interactions with AI models such as [OpenAI ChatGPT](https://openai.com/blog/chatgpt), [OpenAI DALL·E2](https://openai.com/product/dall-e-2), [OpenAI Whisper](https://openai.com/research/whisper) directly from your [Obsidian](https://obsidian.md/) notes.
+Simple plugin to enable interactions with AI models such as [OpenAI ChatGPT](https://openai.com/blog/chatgpt), [OpenAI DALL·E](https://openai.com/product/dall-e-3), [OpenAI Whisper](https://openai.com/research/whisper) directly from your [Obsidian](https://obsidian.md/) notes.
 
 The current available features of this plugin are:
-- 🤖 Text assistant with GPT-3.5 and GPT-4,
-- 🖼 Image generation with DALL·E2,
+- 🤖 Text assistant with GPT-4 and GPT-3.5,
+- 🖼 Image generation with DALL·E3 and DALL·E2,
 - 🗣 Speech to text with Whisper.
 
 ## How to use
@@ -44,14 +44,13 @@ The transcript will be immediately added to your note at your cursor location.
 
 ## Settings
 ### Text Assistant
-- **Model choice**: choice of the text model. Currently `gpt-3.5-turbo` and `gpt-4` are supported. (There is still a 
-[waitlist](https://openai.com/waitlist/gpt-4-api) to access GPT-4. If you have not been invited, GPT-4 will not work here.)
+- **Model choice**: choice of the text model. Currently `gpt-3.5-turbo`, `gpt-4-turbo` and `gpt-4` are supported.
 - **Maximum number of tokens** in the generated answer
 - **Replace or Add below**: In prompt mode, after having selected text from your note and enter your prompt, 
 you can decide to replace your text by the assistant answer or to paste it bellow.
 
 ### Image Assistant
-- The model used is **DALL·E2**,
+- You can switch between **DALL·E3** and **DALL·E2**,
 - Change the default folder of generated images. 
 
 ### Speech to Text
@@ -75,7 +74,3 @@ You can install the [AI Assistant](https://obsidian.md/plugins?id=ai-assistant) 
 ## Requirements
 
 To use this plugin, you need an official API key from [OpenAI](https://platform.openai.com/account/api-keys).
-
-## Limitations
-
-This plugin is currently not compatible with iPadOS.

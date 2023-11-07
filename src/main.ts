@@ -7,12 +7,13 @@ import {
 	Setting,
 } from "obsidian";
 import { ChatModal, ImageModal, PromptModal, SpeechModal } from "./modal";
-import { OpenAI } from "./openai_api";
+import { OpenAIAssistant } from "./openai_api";
 
 interface AiAssistantSettings {
 	mySetting: string;
 	apiKey: string;
 	modelName: string;
+	imageModelName: string;
 	maxTokens: number;
 	replaceSelection: boolean;
 	imgFolder: string;
@@ -23,6 +24,7 @@ const DEFAULT_SETTINGS: AiAssistantSettings = {
 	mySetting: "default",
 	apiKey: "",
 	modelName: "gpt-3.5-turbo",
+	imageModelName: "dall-e-3",
 	maxTokens: 500,
 	replaceSelection: true,
 	imgFolder: "AiAssistant/Assets",
@@ -31,10 +33,10 @@ const DEFAULT_SETTINGS: AiAssistantSettings = {
 
 export default class AiAssistantPlugin extends Plugin {
 	settings: AiAssistantSettings;
-	openai: OpenAI;
+	openai: OpenAIAssistant;
 
 	build_api() {
-		this.openai = new OpenAI(
+		this.openai = new OpenAIAssistant(
 			this.settings.apiKey,
 			this.settings.modelName,
 			this.settings.maxTokens
@@ -76,7 +78,8 @@ export default class AiAssistantPlugin extends Plugin {
 							editor.replaceSelection(answer.trim());
 						}
 					},
-					false
+					false,
+					{}
 				).open();
 			},
 		});
@@ -89,9 +92,11 @@ export default class AiAssistantPlugin extends Plugin {
 					this.app,
 					async (prompt: { [key: string]: string }) => {
 						const answer = await this.openai.img_api_call(
+							this.settings.imageModelName,
 							prompt["prompt_text"],
 							prompt["img_size"],
-							parseInt(prompt["num_img"])
+							parseInt(prompt["num_img"]),
+							prompt["is_hd"] === "true"
 						);
 						if (answer) {
 							const imageModal = new ImageModal(
@@ -103,7 +108,8 @@ export default class AiAssistantPlugin extends Plugin {
 							imageModal.open();
 						}
 					},
-					true
+					true,
+					{ model: this.settings.imageModelName }
 				).open();
 			},
 		});
@@ -175,6 +181,7 @@ class AiAssistantSettingTab extends PluginSettingTab {
 				dropdown
 					.addOptions({
 						"gpt-3.5-turbo": "gpt-3.5-turbo",
+						"gpt-4-1106-preview": "gpt-4-turbo",
 						"gpt-4": "gpt-4",
 					})
 					.setValue(this.plugin.settings.modelName)
@@ -232,6 +239,22 @@ class AiAssistantSettingTab extends PluginSettingTab {
 						} else {
 							new Notice("Image folder cannot be empty");
 						}
+					})
+			);
+		new Setting(containerEl)
+			.setName("Image Model Name")
+			.setDesc("Select your model")
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOptions({
+						"dall-e-3": "dall-e-3",
+						"dall-e-2": "dall-e-2",
+					})
+					.setValue(this.plugin.settings.imageModelName)
+					.onChange(async (value) => {
+						this.plugin.settings.imageModelName = value;
+						await this.plugin.saveSettings();
+						this.plugin.build_api();
 					})
 			);
 
