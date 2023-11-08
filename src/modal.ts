@@ -210,7 +210,6 @@ export class ChatModal extends Modal {
 					content: answer,
 				});
 			}
-
 			this.clearModalContent();
 			await this.displayModalContent();
 			this.is_generating_answer = false;
@@ -260,27 +259,27 @@ export class ChatModal extends Modal {
 			cls: "chat-button-container-right",
 		});
 
-		const record_button = right_button_container.createEl("button", {
-			text: "Record",
-		});
-		record_button.addEventListener(
-			"click",
-			(event: MouseEvent) => new Notice("Not implemented yet")
-		);
-
-		const read_button = right_button_container.createEl("button", {
-			text: "Read",
-		});
-		read_button.addEventListener("click", (event: MouseEvent) => {
-			new Notice("Test generation");
-
-			if (this.prompt_table.at(-1)) {
-				this.openai.text_to_speech_call(
-					// @ts-ignore
-					this.prompt_table.at(-1).content
-				);
-			}
-		});
+		// const record_button = right_button_container.createEl("button", {
+		// 	text: "Record",
+		// });
+		// record_button.addEventListener(
+		// 	"click",
+		// 	(event: MouseEvent) => new Notice("Not implemented yet")
+		// );
+		//
+		// const read_button = right_button_container.createEl("button", {
+		// 	text: "Read",
+		// });
+		// read_button.addEventListener("click", (event: MouseEvent) => {
+		// 	new Notice("Test generation");
+		//
+		// 	if (this.prompt_table.at(-1)) {
+		// 		this.openai.text_to_speech_call(
+		// 			// @ts-ignore
+		// 			this.prompt_table.at(-1).content
+		// 		);
+		// 	}
+		// });
 
 		const input_field = right_button_container.createEl("input", {
 			placeholder: "Your prompt here",
