@@ -1,8 +1,8 @@
 import { MarkdownRenderer, MarkdownView, Notice } from "obsidian";
 
 import { OpenAI } from "openai";
-import * as path from "path";
-import * as fs from "fs";
+// import * as path from "path";
+// import * as fs from "fs";
 
 // class CustomFormData extends FormData {
 // 	getHeaders() {
@@ -34,57 +34,20 @@ export class OpenAIAssistant {
 		const streamMode = htmlEl !== undefined;
 
 		try {
-			const response = await fetch(
-				"https://api.openai.com/v1/chat/completions",
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-						Authorization: `Bearer ${this.apiKey}`,
-					},
-					body: JSON.stringify({
-						model: this.modelName,
-						max_tokens: this.maxTokens,
-						messages: prompt_list,
-						stream: streamMode,
-					}),
-				}
-			);
+			const response = await this.apiFun.chat.completions.create({
+				messages: prompt_list,
+				model: this.modelName,
+				max_tokens: this.maxTokens,
+				stream: streamMode,
+			});
+
 			if (streamMode) {
-				const reader = response.body?.getReader();
-				const textDecoder = new TextDecoder("utf-8");
-
-				if (!reader) {
-					throw new Error("Error: fail to read data from response");
-				}
-
 				let responseText = "";
-				while (true) {
-					const { done, value } = await reader.read();
-					if (done) break;
-
-					const chunk = textDecoder.decode(value);
-
-					let currentText = "";
-					for (const line of chunk.split("\n")) {
-						const trimmedLine = line.trim();
-
-						if (!trimmedLine || trimmedLine === "data: [DONE]") {
-							continue;
-						}
-
-						const response = JSON.parse(
-							trimmedLine.replace("data: ", "")
-						);
-						const content = response.choices[0].delta.content;
-						if (!content) continue;
-
-						currentText = currentText.concat(content);
-					}
-					responseText += currentText;
-					// Reset inner HTML before rendering Markdown
-					htmlEl.innerHTML = "";
-					if (streamMode) {
+				for await (const chunk of response) {
+					const content = chunk.choices[0].delta.content;
+					if (content) {
+						responseText = responseText.concat(content);
+						htmlEl.innerHTML = "";
 						if (view) {
 							await MarkdownRenderer.renderMarkdown(
 								responseText,
@@ -93,14 +56,13 @@ export class OpenAIAssistant {
 								view
 							);
 						} else {
-							htmlEl.innerHTML += currentText;
+							htmlEl.innerHTML += responseText;
 						}
 					}
 				}
 				return htmlEl.innerHTML;
 			} else {
-				const data = await response.json();
-				return data.choices[0].message.content;
+				return response.choices[0].message.content;
 			}
 		} catch (err) {
 			new Notice("## OpenAI API ## " + err);

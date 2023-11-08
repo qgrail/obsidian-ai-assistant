@@ -113,6 +113,13 @@ export class PromptModal extends Modal {
 		}
 	}
 
+	submit_action() {
+		if (this.param_dict["prompt_text"]) {
+			this.close();
+			this.onSubmit(this.param_dict);
+		}
+	}
+
 	onOpen() {
 		const { contentEl } = this;
 		this.titleEl.setText("What can I do for you?");
@@ -128,10 +135,7 @@ export class PromptModal extends Modal {
 		input_field.addEventListener("keypress", (evt) => {
 			if (evt.key === "Enter") {
 				this.param_dict["prompt_text"] = input_field.value.trim();
-				if (this.param_dict["prompt_text"]) {
-					this.close();
-					this.onSubmit(this.param_dict);
-				}
+				this.submit_action();
 			}
 		});
 
@@ -141,10 +145,7 @@ export class PromptModal extends Modal {
 		});
 		submit_btn.addEventListener("click", () => {
 			this.param_dict["prompt_text"] = input_field.value.trim();
-			if (this.param_dict["prompt_text"]) {
-				this.close();
-				this.onSubmit(this.param_dict);
-			}
+			this.submit_action();
 		});
 
 		input_field.focus();
