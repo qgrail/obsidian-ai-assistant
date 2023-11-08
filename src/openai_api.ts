@@ -1,6 +1,8 @@
 import { MarkdownRenderer, MarkdownView, Notice } from "obsidian";
 
 import { OpenAI } from "openai";
+import * as path from "path";
+import * as fs from "fs";
 
 // class CustomFormData extends FormData {
 // 	getHeaders() {
@@ -23,6 +25,7 @@ export class OpenAIAssistant {
 		this.maxTokens = maxTokens;
 		this.apiKey = apiKey;
 	}
+
 	api_call = async (
 		prompt_list: { [key: string]: string }[],
 		htmlEl?: HTMLElement,
@@ -140,5 +143,19 @@ export class OpenAIAssistant {
 		} catch (err) {
 			new Notice("## OpenAI API ## " + err);
 		}
+	};
+
+	text_to_speech_call = async (input_text: string) => {
+		const mp3 = await this.apiFun.audio.speech.create({
+			model: "tts-1",
+			voice: "alloy",
+			input: input_text,
+		});
+
+		const blob = new Blob([await mp3.arrayBuffer()], { type: "audio/mp3" });
+		const url = URL.createObjectURL(blob);
+		const audio = new Audio(url);
+
+		await audio.play();
 	};
 }

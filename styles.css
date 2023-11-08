@@ -59,6 +59,28 @@
 	font-style: italic;
 }
 
+.chat-button-container {
+	display: flex;
+	flex-direction: row;
+	align-items: baseline;
+	justify-content: space-between;
+}
+
+.chat-button-container-right {
+	display: flex;
+	flex-direction: row;
+	align-items: stretch;
+	justify-content: flex-end;
+	gap: 5px;
+
+}
+.upper-border {
+	border-top: 1px solid #686868;
+	padding-top: 5px;
+}
+
+
+
 .prompt-left-container {
 	display: flex;
     flex-direction: column;
