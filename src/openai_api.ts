@@ -18,6 +18,14 @@ export class OpenAIAssistant {
 		this.apiKey = apiKey;
 	}
 
+	display_error = (err: any) => {
+		if (err instanceof OpenAI.APIError) {
+			new Notice("## OpenAI API ## " + err);
+		} else {
+			new Notice(err);
+		}
+	};
+
 	api_call = async (
 		prompt_list: { [key: string]: string }[],
 		htmlEl?: HTMLElement,
@@ -57,7 +65,7 @@ export class OpenAIAssistant {
 				return response.choices[0].message.content;
 			}
 		} catch (err) {
-			new Notice("## OpenAI API ## " + err);
+			this.display_error(err);
 		}
 	};
 
@@ -82,7 +90,7 @@ export class OpenAIAssistant {
 			const response = await this.apiFun.images.generate(params);
 			return response.data.map((x: any) => x.url);
 		} catch (err) {
-			new Notice("## OpenAI API ## " + err);
+			this.display_error(err);
 		}
 	};
 
@@ -95,7 +103,7 @@ export class OpenAIAssistant {
 			});
 			return completion.text;
 		} catch (err) {
-			new Notice("## OpenAI API ## " + err);
+			this.display_error(err);
 		}
 	};
 
@@ -115,7 +123,7 @@ export class OpenAIAssistant {
 
 			await audio.play();
 		} catch (err) {
-			new Notice("## OpenAI API ## " + err);
+			this.display_error(err);
 		}
 	};
 }
