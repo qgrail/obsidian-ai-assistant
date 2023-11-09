@@ -2,12 +2,6 @@ import { MarkdownRenderer, MarkdownView, Notice } from "obsidian";
 
 import { OpenAI } from "openai";
 
-// class CustomFormData extends FormData {
-// 	getHeaders() {
-// 		return {};
-// 	}
-// }
-
 export class OpenAIAssistant {
 	modelName: string;
 	apiFun: any;
@@ -23,6 +17,15 @@ export class OpenAIAssistant {
 		this.maxTokens = maxTokens;
 		this.apiKey = apiKey;
 	}
+
+	display_error = (err: any) => {
+		if (err instanceof OpenAI.APIError) {
+			new Notice("## OpenAI API ## " + err);
+		} else {
+			new Notice(err);
+		}
+	};
+
 	api_call = async (
 		prompt_list: { [key: string]: string }[],
 		htmlEl?: HTMLElement,
@@ -31,57 +34,20 @@ export class OpenAIAssistant {
 		const streamMode = htmlEl !== undefined;
 
 		try {
-			const response = await fetch(
-				"https://api.openai.com/v1/chat/completions",
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-						Authorization: `Bearer ${this.apiKey}`,
-					},
-					body: JSON.stringify({
-						model: this.modelName,
-						max_tokens: this.maxTokens,
-						messages: prompt_list,
-						stream: streamMode,
-					}),
-				}
-			);
+			const response = await this.apiFun.chat.completions.create({
+				messages: prompt_list,
+				model: this.modelName,
+				max_tokens: this.maxTokens,
+				stream: streamMode,
+			});
+
 			if (streamMode) {
-				const reader = response.body?.getReader();
-				const textDecoder = new TextDecoder("utf-8");
-
-				if (!reader) {
-					throw new Error("Error: fail to read data from response");
-				}
-
 				let responseText = "";
-				while (true) {
-					const { done, value } = await reader.read();
-					if (done) break;
-
-					const chunk = textDecoder.decode(value);
-
-					let currentText = "";
-					for (const line of chunk.split("\n")) {
-						const trimmedLine = line.trim();
-
-						if (!trimmedLine || trimmedLine === "data: [DONE]") {
-							continue;
-						}
-
-						const response = JSON.parse(
-							trimmedLine.replace("data: ", "")
-						);
-						const content = response.choices[0].delta.content;
-						if (!content) continue;
-
-						currentText = currentText.concat(content);
-					}
-					responseText += currentText;
-					// Reset inner HTML before rendering Markdown
-					htmlEl.innerHTML = "";
-					if (streamMode) {
+				for await (const chunk of response) {
+					const content = chunk.choices[0].delta.content;
+					if (content) {
+						responseText = responseText.concat(content);
+						htmlEl.innerHTML = "";
 						if (view) {
 							await MarkdownRenderer.renderMarkdown(
 								responseText,
@@ -90,17 +56,16 @@ export class OpenAIAssistant {
 								view
 							);
 						} else {
-							htmlEl.innerHTML += currentText;
+							htmlEl.innerHTML += responseText;
 						}
 					}
 				}
 				return htmlEl.innerHTML;
 			} else {
-				const data = await response.json();
-				return data.choices[0].message.content;
+				return response.choices[0].message.content;
 			}
 		} catch (err) {
-			new Notice("## OpenAI API ## " + err);
+			this.display_error(err);
 		}
 	};
 
@@ -125,7 +90,7 @@ export class OpenAIAssistant {
 			const response = await this.apiFun.images.generate(params);
 			return response.data.map((x: any) => x.url);
 		} catch (err) {
-			new Notice("## OpenAI API ## " + err);
+			this.display_error(err);
 		}
 	};
 
@@ -138,7 +103,27 @@ export class OpenAIAssistant {
 			});
 			return completion.text;
 		} catch (err) {
-			new Notice("## OpenAI API ## " + err);
+			this.display_error(err);
+		}
+	};
+
+	text_to_speech_call = async (input_text: string) => {
+		try {
+			const mp3 = await this.apiFun.audio.speech.create({
+				model: "tts-1",
+				voice: "alloy",
+				input: input_text,
+			});
+
+			const blob = new Blob([await mp3.arrayBuffer()], {
+				type: "audio/mp3",
+			});
+			const url = URL.createObjectURL(blob);
+			const audio = new Audio(url);
+
+			await audio.play();
+		} catch (err) {
+			this.display_error(err);
 		}
 	};
 }

@@ -6,7 +6,6 @@ import {
 	Modal,
 	Notice,
 	requestUrl,
-	Setting,
 } from "obsidian";
 
 export class PromptModal extends Modal {
@@ -31,122 +30,129 @@ export class PromptModal extends Modal {
 		};
 	}
 
-	onOpen() {
-		const { contentEl } = this;
-		if (this.is_img_modal) {
-			this.titleEl.setText("What can I generate for you?");
-		} else {
-			this.titleEl.setText("What can I do for you?");
-		}
+	build_image_modal() {
+		this.titleEl.setText("What can I generate for you?");
+		const prompt_container = this.contentEl.createEl("div", {
+			cls: "prompt-modal-container",
+		});
+		this.contentEl.append(prompt_container);
 
-		const prompt_area = new Setting(contentEl).addText((text) =>
-			text.onChange((value) => {
-				this.param_dict["prompt_text"] = value.trim();
-			})
-		);
-
-		prompt_area.addButton((btn) =>
-			btn
-				.setButtonText("Submit")
-				.setCta()
-				.onClick(() => {
-					if (this.param_dict["prompt_text"]) {
-						this.close();
-						this.onSubmit(this.param_dict);
-					}
-				})
-		);
-
-		const input_prompt = this.modalEl.getElementsByTagName("input")[0];
-		input_prompt.addEventListener("keypress", (evt) => {
-			if (evt.key === "Enter" && this.param_dict["prompt_text"]) {
-				this.close();
-				this.onSubmit(this.param_dict);
-			}
+		const prompt_left_container = prompt_container.createEl("div", {
+			cls: "prompt-left-container",
 		});
 
-		if (this.is_img_modal) {
-			const prompt_container = this.contentEl.createEl("div", {
-				cls: "prompt-modal-container",
-			});
-			this.contentEl.append(prompt_container);
+		const desc1 = prompt_left_container.createEl("p", {
+			cls: "description",
+		});
+		desc1.innerText = "Resolution";
 
-			const prompt_left_container = prompt_container.createEl("div", {
-				cls: "prompt-left-container",
-			});
+		const prompt_right_container = prompt_container.createEl("div", {
+			cls: "prompt-right-container",
+		});
 
-			const desc1 = prompt_left_container.createEl("p", {
+		const resolution_dropdown = prompt_right_container.createEl("select");
+
+		let options = ["256x256", "512x512", "1024x1024"];
+		this.param_dict["img_size"] = "256x256";
+
+		if (this.settings["model"] === "dall-e-3") {
+			options = ["1024x1024", "1792x1024", "1024x1792"];
+			this.param_dict["img_size"] = "1024x1024";
+		}
+
+		options.forEach((option) => {
+			const optionEl = resolution_dropdown.createEl("option", {
+				text: option,
+			});
+			optionEl.value = option;
+			if (option === this.param_dict["img_size"]) {
+				optionEl.selected = true;
+			}
+		});
+		resolution_dropdown.addEventListener("change", (event) => {
+			const selectElement = event.target as HTMLSelectElement;
+			this.param_dict["img_size"] = selectElement.value;
+		});
+
+		if (this.settings["model"] === "dall-e-2") {
+			const desc2 = prompt_left_container.createEl("p", {
 				cls: "description",
 			});
-			desc1.innerText = "Resolution";
+			desc2.innerText = "Num images";
 
-			const prompt_right_container = prompt_container.createEl("div", {
-				cls: "prompt-right-container",
-			});
-
-			const resolution_dropdown =
-				prompt_right_container.createEl("select");
-
-			let options = ["256x256", "512x512", "1024x1024"];
-			this.param_dict["img_size"] = "256x256";
-
-			if (this.settings["model"] === "dall-e-3") {
-				options = ["1024x1024", "1792x1024", "1024x1792"];
-				this.param_dict["img_size"] = "1024x1024";
-			}
-
-			options.forEach((option) => {
-				const optionEl = resolution_dropdown.createEl("option", {
+			const num_img_dropdown = prompt_right_container.createEl("select");
+			const num_choices = [...Array(10).keys()].map((x) =>
+				(x + 1).toString()
+			);
+			num_choices.forEach((option) => {
+				const optionEl = num_img_dropdown.createEl("option", {
 					text: option,
 				});
 				optionEl.value = option;
-				if (option === this.param_dict["img_size"]) {
+				if (option === this.param_dict["num_img"]) {
 					optionEl.selected = true;
 				}
 			});
-			resolution_dropdown.addEventListener("change", (event) => {
+			num_img_dropdown.addEventListener("change", (event) => {
 				const selectElement = event.target as HTMLSelectElement;
-				this.param_dict["img_size"] = selectElement.value;
+				this.param_dict["num_img"] = selectElement.value;
 			});
+		}
+		if (this.settings["model"] === "dall-e-3") {
+			const desc2 = prompt_left_container.createEl("p", {
+				cls: "description",
+			});
+			desc2.innerText = "HD?";
+			const is_hd = prompt_right_container.createEl("input", {
+				type: "checkbox",
+			});
+			is_hd.checked = this.param_dict["is_hd"] === "true";
+			is_hd.addEventListener("change", (event) => {
+				this.param_dict["is_hd"] = is_hd.checked.toString();
+			});
+		}
+	}
 
-			if (this.settings["model"] === "dall-e-2") {
-				const desc2 = prompt_left_container.createEl("p", {
-					cls: "description",
-				});
-				desc2.innerText = "Num images";
+	submit_action() {
+		if (this.param_dict["prompt_text"]) {
+			this.close();
+			this.onSubmit(this.param_dict);
+		}
+	}
 
-				const num_img_dropdown =
-					prompt_right_container.createEl("select");
-				const num_choices = [...Array(10).keys()].map((x) =>
-					(x + 1).toString()
-				);
-				num_choices.forEach((option) => {
-					const optionEl = num_img_dropdown.createEl("option", {
-						text: option,
-					});
-					optionEl.value = option;
-					if (option === this.param_dict["num_img"]) {
-						optionEl.selected = true;
-					}
-				});
-				num_img_dropdown.addEventListener("change", (event) => {
-					const selectElement = event.target as HTMLSelectElement;
-					this.param_dict["num_img"] = selectElement.value;
-				});
+	onOpen() {
+		const { contentEl } = this;
+		this.titleEl.setText("What can I do for you?");
+
+		const input_container = contentEl.createEl("div", {
+			cls: "chat-button-container-right",
+		});
+
+		const input_field = input_container.createEl("input", {
+			placeholder: "Your prompt here",
+			type: "text",
+		});
+		input_field.addEventListener("keypress", (evt) => {
+			if (evt.key === "Enter") {
+				this.param_dict["prompt_text"] = input_field.value.trim();
+				this.submit_action();
 			}
-			if (this.settings["model"] === "dall-e-3") {
-				const desc2 = prompt_left_container.createEl("p", {
-					cls: "description",
-				});
-				desc2.innerText = "HD?";
-				const is_hd = prompt_right_container.createEl("input", {
-					type: "checkbox",
-				});
-				is_hd.checked = this.param_dict["is_hd"] === "true";
-				is_hd.addEventListener("change", (event) => {
-					this.param_dict["is_hd"] = is_hd.checked.toString();
-				});
-			}
+		});
+
+		const submit_btn = input_container.createEl("button", {
+			text: "Submit",
+			cls: "mod-cta",
+		});
+		submit_btn.addEventListener("click", () => {
+			this.param_dict["prompt_text"] = input_field.value.trim();
+			this.submit_action();
+		});
+
+		input_field.focus();
+		input_field.select();
+
+		if (this.is_img_modal) {
+			this.build_image_modal();
 		}
 	}
 
@@ -204,7 +210,6 @@ export class ChatModal extends Modal {
 					content: answer,
 				});
 			}
-
 			this.clearModalContent();
 			await this.displayModalContent();
 			this.is_generating_answer = false;
@@ -242,48 +247,86 @@ export class ChatModal extends Modal {
 			});
 		}
 
-		const prompt_field = new Setting(contentEl)
-			.setName("Type here:")
-			.addText((text) => {
-				text.setPlaceholder("Your prompt here").onChange((value) => {
-					this.prompt_text = value.trim();
-				});
-			});
+		const button_container = contentEl.createEl("div", {
+			cls: "chat-button-container",
+		});
 
-		const input_prompt = this.modalEl.getElementsByTagName("input")[0];
-		input_prompt.focus();
-		input_prompt.select();
+		button_container.createEl("p", {
+			text: "Type here:",
+		});
 
-		input_prompt.addEventListener("keypress", (evt) => {
+		const right_button_container = button_container.createEl("div", {
+			cls: "chat-button-container-right",
+		});
+
+		// const record_button = right_button_container.createEl("button", {
+		// 	text: "Record",
+		// });
+		// record_button.addEventListener(
+		// 	"click",
+		// 	(event: MouseEvent) => new Notice("Not implemented yet")
+		// );
+		//
+		// const read_button = right_button_container.createEl("button", {
+		// 	text: "Read",
+		// });
+		// read_button.addEventListener("click", (event: MouseEvent) => {
+		// 	new Notice("Test generation");
+		//
+		// 	if (this.prompt_table.at(-1)) {
+		// 		this.openai.text_to_speech_call(
+		// 			// @ts-ignore
+		// 			this.prompt_table.at(-1).content
+		// 		);
+		// 	}
+		// });
+
+		const input_field = right_button_container.createEl("input", {
+			placeholder: "Your prompt here",
+			type: "text",
+		});
+		input_field.addEventListener("keypress", (evt) => {
 			if (evt.key === "Enter") {
+				this.prompt_text = input_field.value.trim();
 				this.send_action();
 			}
 		});
 
-		prompt_field.addButton((btn) =>
-			btn
-				.setButtonText("Submit")
-				.setCta()
-				.onClick(() => this.send_action())
-		);
+		const submit_btn = right_button_container.createEl("button", {
+			text: "Submit",
+			cls: "mod-cta",
+		});
+		submit_btn.addEventListener("click", () => {
+			this.prompt_text = input_field.value.trim();
+			this.send_action();
+		});
 
-		const clear_button = new Setting(contentEl).addButton((btn) =>
-			btn.setButtonText("Clear").onClick(() => {
-				this.prompt_table = [];
-				this.clearModalContent();
-				this.displayModalContent();
-			})
-		);
+		input_field.focus();
+		input_field.select();
 
-		clear_button.addButton((btn) =>
-			btn.setButtonText("Copy conversation").onClick(async () => {
-				const conversation = this.prompt_table
-					.map((x) => x["content"])
-					.join("\n\n");
-				await navigator.clipboard.writeText(conversation);
-				new Notice("Conversation copied to clipboard");
-			})
-		);
+		const button_container_2 = contentEl.createEl("div", {
+			cls: "chat-button-container-right upper-border",
+		});
+
+		const clear_button = button_container_2.createEl("button", {
+			text: "Clear",
+		});
+		const copy_button = button_container_2.createEl("button", {
+			text: "Copy conversation",
+		});
+
+		clear_button.addEventListener("click", () => {
+			this.prompt_table = [];
+			this.clearModalContent();
+			this.displayModalContent();
+		});
+		copy_button.addEventListener("click", async () => {
+			const conversation = this.prompt_table
+				.map((x) => x["content"])
+				.join("\n\n");
+			await navigator.clipboard.writeText(conversation);
+			new Notice("Conversation copied to clipboard");
+		});
 	}
 
 	onOpen() {
