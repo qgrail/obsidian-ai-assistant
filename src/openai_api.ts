@@ -32,11 +32,12 @@ export class OpenAIAssistant {
 		view?: MarkdownView
 	) => {
 		const streamMode = htmlEl !== undefined;
-
 		try {
 			const response = await this.apiFun.chat.completions.create({
 				messages: prompt_list,
-				model: this.modelName,
+				// FIXME
+				// model: this.modelName,
+				model: "gpt-4-vision-preview",
 				max_tokens: this.maxTokens,
 				stream: streamMode,
 			});
