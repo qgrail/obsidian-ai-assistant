@@ -166,8 +166,6 @@ export class ChatModal extends Modal {
 	prompt_table: { [key: string]: any }[] = [];
 	openai: any;
 	is_generating_answer: boolean;
-	// videoStream: any;
-
 
 	constructor(app: App, openai: any) {
 		super(app);
@@ -179,29 +177,6 @@ export class ChatModal extends Modal {
 		this.contentEl.innerHTML = "";
 		this.prompt_text = "";
 	}
-
-	// start_camera = async (): Promise<any> => {
-	// 	try {
-	//
-	// 		const constraints = {
-	// 			video: true
-	// 		};
-	// 		return navigator.mediaDevices.getUserMedia(constraints);
-	//
-	// 	} catch (error) {
-	// 		console.error('Error accessing the camera', error);
-	// 	}
-	//
-	//
-	// };
-	//
-	// stop_camera = () => {
-	// 	if (this.videoStream) {
-	// 		this.videoStream.getTracks().forEach((track: any) => {
-	// 			track.stop();
-	// 		});
-	// 	}
-	// }
 
 	send_action = async () => {
 		if (this.prompt_text && !this.is_generating_answer) {
@@ -301,29 +276,6 @@ export class ChatModal extends Modal {
 			cls: "chat-button-container-right",
 		});
 
-		// Add Record and Read buttons.
-		// const record_button = right_button_container.createEl("button", {
-		// 	text: "Record",
-		// });
-		// record_button.addEventListener(
-		// 	"click",
-		// 	(event: MouseEvent) => new Notice("Not implemented yet")
-		// );
-		//
-		// const read_button = right_button_container.createEl("button", {
-		// 	text: "Read",
-		// });
-		// read_button.addEventListener("click", (event: MouseEvent) => {
-		// 	new Notice("Test generation");
-		//
-		// 	if (this.prompt_table.at(-1)) {
-		// 		this.openai.text_to_speech_call(
-		// 			// @ts-ignore
-		// 			this.prompt_table.at(-1).content
-		// 		);
-		// 	}
-		// });
-
 		// Upload image from file
 		const hidden_add_file_button = right_button_container.createEl("input", {
 			type: "file",
@@ -420,61 +372,6 @@ export class ChatModal extends Modal {
 				reader.readAsDataURL(blob);
 			});
 		};
-
-		// // Upload image from camera
-		// // Currently not working on Android
-		// const take_picture_button = button_container_2.createEl("button", {text: "Take picture"});
-		// const video = contentEl.createEl("video");
-		// video.hidden = true;
-		// video.autoplay = true;
-		// video.width = 640;
-		// video.height = 480;
-		// const canvas = contentEl.createEl("canvas");
-		// canvas.width = 640;
-		// canvas.height = 480;
-		// canvas.hidden = true;
-		// const context = canvas.getContext('2d');
-		//
-		// take_picture_button.addEventListener('click', async (e: Event) => {
-		// 	if (this.videoStream == null) {
-		// 		this.videoStream = await this.start_camera()
-		// 		const recorder = new MediaRecorder(this.videoStream);
-		// 		console.log(recorder)
-		// 		video.srcObject = this.videoStream;
-		// 		video.hidden = false;
-		// 	}
-		// });
-		//
-		//
-		// const screenshot = button_container_2.createEl("button", {text: "Screenshot"});
-		// screenshot.addEventListener('click', () => {
-		// 	if (context) {
-		// 		context.drawImage(video, 0, 0, canvas.width, canvas.height);
-		// 		const imageSrc = canvas.toDataURL('image/png');
-		// 		this.prompt_table.push({
-		// 			"role": "user",
-		// 			"content":
-		// 				[{
-		// 					"type": "image_url",
-		// 					"image_url": {
-		// 						"url": imageSrc,
-		// 						"detail": "medium"
-		// 					},
-		// 				}],
-		//
-		// 		});
-		// 		this.clearModalContent();
-		// 		this.displayModalContent();
-		// 	}
-		//
-		// 	if (video.srcObject) {
-		// 		// this.stop_camera(video.srcObject);
-		// 		this.stop_camera();
-		// 		video.srcObject = null;
-		// 		this.videoStream = null;
-		// 	}
-		// });
-
 	}
 
 	onOpen() {
@@ -484,7 +381,6 @@ export class ChatModal extends Modal {
 
 	onClose() {
 		this.contentEl.empty();
-		// this.stop_camera()
 	}
 }
 
