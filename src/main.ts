@@ -7,10 +7,17 @@ import {
 	Setting,
 } from "obsidian";
 import { ChatModal, ImageModal, PromptModal, SpeechModal } from "./modal";
-import { OpenAIAssistant } from "./openai_api";
+import { AiAssistantInterface, AiSettingTab } from "./api_interface";
+import { OpenAIAssistant, OpenaiSettingTab } from "./openai_api";
+import { GoogleGeminiApi, GoogleGeminiSettingTab } from "./google_gemini_api";
+import { type } from "os";
+
+interface Settings {
+	provider: string;
+	assistantSettings: Map<string, AiAssistantSettings>;
+};
 
 interface AiAssistantSettings {
-	mySetting: string;
 	apiKey: string;
 	modelName: string;
 	imageModelName: string;
@@ -19,28 +26,61 @@ interface AiAssistantSettings {
 	imgFolder: string;
 	language: string;
 }
-
-const DEFAULT_SETTINGS: AiAssistantSettings = {
-	mySetting: "default",
-	apiKey: "",
-	modelName: "gpt-3.5-turbo",
-	imageModelName: "dall-e-3",
-	maxTokens: 500,
-	replaceSelection: true,
-	imgFolder: "AiAssistant/Assets",
-	language: "",
+const DEFAULT_SETTINGS: Settings = {
+	provider: "openai",
+	assistantSettings: new Map<string, AiAssistantSettings>([
+		["openai", {
+			apiKey: "",
+			modelName: "gpt-3.5-turbo",
+			imageModelName: "dall-e-3",
+			maxTokens: 500,
+			replaceSelection: true,
+			imgFolder: "AiAssistant/Assets",
+			language: "",
+		}],
+		[
+			"google", {
+				apiKey: "",
+				modelName: "gemini-pro-vision",
+				imageModelName: "none",
+				maxTokens: 100,
+				replaceSelection: true,
+				imgFolder: "AiAssistant/Assets",
+				language: "",
+			}
+		]
+	])
 };
 
 export default class AiAssistantPlugin extends Plugin {
-	settings: AiAssistantSettings;
-	openai: OpenAIAssistant;
+	settings: Settings;
+	assistantSettings: AiAssistantSettings;
+	model: AiAssistantInterface;
 
 	build_api() {
-		this.openai = new OpenAIAssistant(
-			this.settings.apiKey,
-			this.settings.modelName,
-			this.settings.maxTokens
-		);
+		try {
+			switch (this.settings.provider) {
+				case "openai":
+					this.model = new OpenAIAssistant(
+						this.assistantSettings.apiKey,
+						this.assistantSettings.modelName,
+						this.assistantSettings.maxTokens,
+					);
+					break;
+				case "google":
+					this.model = new GoogleGeminiApi(
+						this.assistantSettings.apiKey,
+						this.assistantSettings.modelName,
+						this.assistantSettings.maxTokens,
+					);
+					break;
+				default:
+					new Notice("Provider not supported");
+					break;
+			}
+		} catch (error) {
+			new Notice("Error while building API. Please check your settings." + error);
+		}
 	}
 
 	async onload() {
@@ -51,7 +91,7 @@ export default class AiAssistantPlugin extends Plugin {
 			id: "chat-mode",
 			name: "Open Assistant Chat",
 			callback: () => {
-				new ChatModal(this.app, this.openai).open();
+				new ChatModal(this.app, this.model).open();
 			},
 		});
 
@@ -63,7 +103,7 @@ export default class AiAssistantPlugin extends Plugin {
 				new PromptModal(
 					this.app,
 					async (x: { [key: string]: string }) => {
-						let answer = await this.openai.api_call([
+						let answer = await this.model.api_call([
 							{
 								role: "user",
 								content:
@@ -71,7 +111,7 @@ export default class AiAssistantPlugin extends Plugin {
 							},
 						]);
 						answer = answer!;
-						if (!this.settings.replaceSelection) {
+						if (!this.assistantSettings.replaceSelection) {
 							answer = selected_text + "\n" + answer.trim();
 						}
 						if (answer) {
@@ -91,8 +131,8 @@ export default class AiAssistantPlugin extends Plugin {
 				new PromptModal(
 					this.app,
 					async (prompt: { [key: string]: string }) => {
-						const answer = await this.openai.img_api_call(
-							this.settings.imageModelName,
+						const answer = await this.model.img_api_call(
+							this.assistantSettings.imageModelName,
 							prompt["prompt_text"],
 							prompt["img_size"],
 							parseInt(prompt["num_img"]),
@@ -103,13 +143,13 @@ export default class AiAssistantPlugin extends Plugin {
 								this.app,
 								answer,
 								prompt["prompt_text"],
-								this.settings.imgFolder
+								this.assistantSettings.imgFolder
 							);
 							imageModal.open();
 						}
 					},
 					true,
-					{ model: this.settings.imageModelName }
+					{ model: this.assistantSettings.imageModelName }
 				).open();
 			},
 		});
@@ -120,8 +160,8 @@ export default class AiAssistantPlugin extends Plugin {
 			editorCallback: (editor: Editor) => {
 				new SpeechModal(
 					this.app,
-					this.openai,
-					this.settings.language,
+					this.model,
+					this.assistantSettings.language,
 					editor
 				).open();
 			},
@@ -130,7 +170,9 @@ export default class AiAssistantPlugin extends Plugin {
 		this.addSettingTab(new AiAssistantSettingTab(this.app, this));
 	}
 
-	onunload() {}
+	onunload() {
+		this.saveSettings();
+	}
 
 	async loadSettings() {
 		this.settings = Object.assign(
@@ -138,19 +180,45 @@ export default class AiAssistantPlugin extends Plugin {
 			DEFAULT_SETTINGS,
 			await this.loadData()
 		);
+		// convert this.settings.assistantSettings to Map<string, AiAssistantSettings>
+		this.settings.assistantSettings = new Map<string, AiAssistantSettings>(Object.entries(this.settings.assistantSettings));
+		try {
+			this.assistantSettings = this.settings.assistantSettings.get(this.settings.provider)!;
+			if (!this.assistantSettings) {
+				throw new Error("Error while loading settings");
+			}
+		} catch (error) {
+			this.settings.provider = "openai";
+			this.assistantSettings = DEFAULT_SETTINGS.assistantSettings.get("openai")!;
+		}
+
+		console.log("loadSettings:\n" + this.settings);
 	}
 
 	async saveSettings() {
+		console.log("saveSettings:\n" + this.settings);
 		await this.saveData(this.settings);
 	}
 }
 
 class AiAssistantSettingTab extends PluginSettingTab {
 	plugin: AiAssistantPlugin;
+	setting_tab: AiSettingTab;
 
 	constructor(app: App, plugin: AiAssistantPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
+		switch (this.plugin.settings.provider) {
+			case "openai":
+				this.setting_tab = OpenaiSettingTab;
+				break;
+			case "google":
+				this.setting_tab = GoogleGeminiSettingTab;
+				break;
+			default:
+				new Notice("Provider not supported");
+				break;
+		}
 	}
 
 	display(): void {
@@ -159,15 +227,59 @@ class AiAssistantSettingTab extends PluginSettingTab {
 		containerEl.empty();
 		containerEl.createEl("h2", { text: "Settings for my AI assistant." });
 
+		new Setting(containerEl).
+			setName("Provider").
+			setDesc("Select your provider").
+			addDropdown((dropdown) =>
+				dropdown
+					.addOptions({
+						"openai": "OpenAI",
+						"google": "Google",
+					})
+					.setValue(this.plugin.settings.provider)
+					.onChange(async (value) => {
+						// save the current settings
+						this.plugin.settings.assistantSettings.set(this.plugin.settings.provider, this.plugin.assistantSettings);
+						await this.plugin.saveSettings();
+
+						// load the new settings
+						this.plugin.settings.provider = value;
+						this.plugin.assistantSettings = this.plugin.settings.assistantSettings.get(value)!;
+						if (!this.plugin.assistantSettings) {
+							this.plugin.assistantSettings = DEFAULT_SETTINGS.assistantSettings.get(value)!;
+						}
+
+						// console.log(this.plugin.assistantSettings);
+
+						switch (value) {
+							case "openai":
+								this.setting_tab = OpenaiSettingTab;
+								break;
+							case "google":
+								this.setting_tab = GoogleGeminiSettingTab;
+								break;
+							default:
+								new Notice("Provider not supported");
+								break;
+						}
+
+						// console.log(this.setting_tab);
+
+						this.plugin.build_api();
+						// fresh the setting tab
+						this.display();
+					})
+			);
+
 		new Setting(containerEl)
 			.setName("API Key")
-			.setDesc("OpenAI API Key")
+			.setDesc("API Key")
 			.addText((text) =>
 				text
 					.setPlaceholder("Enter your key here")
-					.setValue(this.plugin.settings.apiKey)
+					.setValue(this.plugin.assistantSettings.apiKey)
 					.onChange(async (value) => {
-						this.plugin.settings.apiKey = value;
+						this.plugin.assistantSettings.apiKey = value;
 						await this.plugin.saveSettings();
 						this.plugin.build_api();
 					})
@@ -179,14 +291,10 @@ class AiAssistantSettingTab extends PluginSettingTab {
 			.setDesc("Select your model")
 			.addDropdown((dropdown) =>
 				dropdown
-					.addOptions({
-						"gpt-3.5-turbo": "gpt-3.5-turbo",
-						"gpt-4-1106-preview": "gpt-4-turbo",
-						"gpt-4": "gpt-4",
-					})
-					.setValue(this.plugin.settings.modelName)
+					.addOptions(this.setting_tab.models)
+					.setValue(this.plugin.assistantSettings.modelName)
 					.onChange(async (value) => {
-						this.plugin.settings.modelName = value;
+						this.plugin.assistantSettings.modelName = value;
 						await this.plugin.saveSettings();
 						this.plugin.build_api();
 					})
@@ -198,13 +306,13 @@ class AiAssistantSettingTab extends PluginSettingTab {
 			.addText((text) =>
 				text
 					.setPlaceholder("Max tokens")
-					.setValue(this.plugin.settings.maxTokens.toString())
+					.setValue(this.plugin.assistantSettings.maxTokens.toString())
 					.onChange(async (value) => {
 						const int_value = parseInt(value);
 						if (!int_value || int_value <= 0) {
 							new Notice("Error while parsing maxTokens ");
 						} else {
-							this.plugin.settings.maxTokens = int_value;
+							this.plugin.assistantSettings.maxTokens = int_value;
 							await this.plugin.saveSettings();
 							this.plugin.build_api();
 						}
@@ -216,9 +324,9 @@ class AiAssistantSettingTab extends PluginSettingTab {
 			.setDesc("Replace selection")
 			.addToggle((toogle) => {
 				toogle
-					.setValue(this.plugin.settings.replaceSelection)
+					.setValue(this.plugin.assistantSettings.replaceSelection)
 					.onChange(async (value) => {
-						this.plugin.settings.replaceSelection = value;
+						this.plugin.assistantSettings.replaceSelection = value;
 						await this.plugin.saveSettings();
 						this.plugin.build_api();
 					});
@@ -230,11 +338,11 @@ class AiAssistantSettingTab extends PluginSettingTab {
 			.addText((text) =>
 				text
 					.setPlaceholder("Enter the path to you image folder")
-					.setValue(this.plugin.settings.imgFolder)
+					.setValue(this.plugin.assistantSettings.imgFolder)
 					.onChange(async (value) => {
 						const path = value.replace(/\/+$/, "");
 						if (path) {
-							this.plugin.settings.imgFolder = path;
+							this.plugin.assistantSettings.imgFolder = path;
 							await this.plugin.saveSettings();
 						} else {
 							new Notice("Image folder cannot be empty");
@@ -246,13 +354,10 @@ class AiAssistantSettingTab extends PluginSettingTab {
 			.setDesc("Select your model")
 			.addDropdown((dropdown) =>
 				dropdown
-					.addOptions({
-						"dall-e-3": "dall-e-3",
-						"dall-e-2": "dall-e-2",
-					})
-					.setValue(this.plugin.settings.imageModelName)
+					.addOptions(this.setting_tab.imgModels)
+					.setValue(this.plugin.assistantSettings.imageModelName)
 					.onChange(async (value) => {
-						this.plugin.settings.imageModelName = value;
+						this.plugin.assistantSettings.imageModelName = value;
 						await this.plugin.saveSettings();
 						this.plugin.build_api();
 					})
@@ -261,12 +366,12 @@ class AiAssistantSettingTab extends PluginSettingTab {
 		containerEl.createEl("h3", { text: "Speech to Text" });
 		new Setting(containerEl)
 			.setName("The language of the input audio")
-			.setDesc("Using ISO-639-1 format (en, fr, de, ...)")
+			.setDesc("Using ISO-639-1 format (en, zh, fr, de, ...)")
 			.addText((text) =>
 				text
-					.setValue(this.plugin.settings.language)
+					.setValue(this.plugin.assistantSettings.language)
 					.onChange(async (value) => {
-						this.plugin.settings.language = value;
+						this.plugin.assistantSettings.language = value;
 						await this.plugin.saveSettings();
 					})
 			);

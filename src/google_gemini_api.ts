@@ -1,0 +1,117 @@
+import { MarkdownRenderer, MarkdownView, Notice } from "obsidian";
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+
+
+// ...
+// https://ai.google.dev/models/gemini?hl=zh-cn
+
+const models_list = [
+    "gemini-pro", "gemini-pro-vision", "embedding-001", "aqa"
+]
+
+
+import { AiAssistantInterface , AiSettingTab} from "./api_interface";
+
+export const GoogleGeminiSettingTab: AiSettingTab = {
+	models: {
+		"gemini-pro":"gemini-pro", 
+        "gemini-pro-vision": "gemini-pro-vision", 
+        "embedding-001":"embedding-001", 
+        "aqa":"aqa"
+	},
+	imgModels: {
+        "none": "none",
+	},
+}
+
+export class GoogleGeminiApi implements AiAssistantInterface {
+	modelName: string;
+	model: any;
+	maxTokens: number;
+	apiKey: string;
+
+    constructor(apiKey: string, modelName: string, maxTokens: number) {
+        this.modelName = modelName;
+        this.apiKey = apiKey;
+        this.maxTokens = maxTokens;
+
+        console.log("Google Gemini API init.")
+        console.log("Model name: " + modelName)
+        console.log("Max tokens: " + maxTokens)
+        console.log("API key: " + apiKey)
+        try {
+            if (!models_list.includes(modelName)) {
+                throw new Error("Model not found.");
+            }
+            const genAI = new GoogleGenerativeAI(apiKey);
+            this.model =  genAI.getGenerativeModel({model: modelName});
+        } catch (error) {
+            console.log(error);
+            throw new Error(error);
+        }
+    }
+
+    display_error = (err: any) => {
+        if (err instanceof GoogleGenerativeAI.APIError) {
+            new Notice("## Google Gemini API ## " + err);
+        } else {
+            new Notice(err);
+        }
+    };
+
+    api_call = async (
+        prompt_list: { [key: string]: string }[],
+        htmlEl?: HTMLElement,
+        view?: MarkdownView
+    ) => {
+        const streamMode = htmlEl !== undefined;
+
+        try {
+            // concatenate all prompts
+            let prompt = "";
+            prompt = prompt_list.map((p) => p.prompt).join("\n");
+
+
+            if (streamMode) {
+                const result = await this.model.model.generateContentStream(prompt);
+
+                let responseText = "";
+                for await (const chunk of result.stream) {
+                    const content = chunk.text();
+                    if (content) {
+                        responseText = responseText.concat(content);
+                        htmlEl.innerHTML = "";
+                        if (view) {
+                            await MarkdownRenderer.renderMarkdown(
+                                responseText,
+                                htmlEl,
+                                "",
+                                view
+                            );
+                        } else {
+                            htmlEl.innerHTML += responseText;
+                        }
+                    }
+                }
+                return htmlEl.innerHTML;
+            } else {
+                const result = await this.model.generateContent(prompt);
+                const response = await result.response;
+                const text = response.text();
+                return text;
+            }
+        } catch (err) {
+            this.display_error(err);
+        }
+    };
+
+    img_api_call = async (
+		model: string,
+		prompt: string,
+		img_size: string,
+		num_img: number,
+		is_hd: boolean
+	) => {
+        throw new Error("Method not implemented for Goole Gemini.");
+    }
+}
