@@ -29,12 +29,13 @@ interface AiAssistantSettings {
 const DEFAULT_SETTINGS: Settings = {
 	provider: "openai",
 	assistantSettings: new Map<string, AiAssistantSettings>([
-		["openai", {
+		[
+			"openai", {
 			apiKey: "",
 			modelName: "gpt-3.5-turbo",
 			imageModelName: "dall-e-3",
 			maxTokens: 500,
-			replaceSelection: true,
+			replaceSelection: false,
 			imgFolder: "AiAssistant/Assets",
 			language: "",
 		}],
@@ -44,7 +45,7 @@ const DEFAULT_SETTINGS: Settings = {
 				modelName: "gemini-pro",
 				imageModelName: "gemini-pro-vision",
 				maxTokens: 1000,
-				replaceSelection: true,
+				replaceSelection: false,
 				imgFolder: "AiAssistant/Assets",
 				language: "",
 			}
@@ -192,7 +193,7 @@ export default class AiAssistantPlugin extends Plugin {
 			this.assistantSettings = DEFAULT_SETTINGS.assistantSettings.get(this.settings.provider)!;
 		}
 
-		console.log("loadSettings:\n" + this.settings);
+		// console.log("loadSettings:\n" + this.settings);
 	}
 
 	async saveSettings() {

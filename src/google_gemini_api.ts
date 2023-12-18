@@ -34,10 +34,10 @@ export class GoogleGeminiApi implements AiAssistantInterface {
         this.apiKey = apiKey;
         this.maxTokens = maxTokens;
 
-        console.log("Google Gemini API init.")
-        console.log("Model name: " + modelName)
-        console.log("Max tokens: " + maxTokens)
-        console.log("API key: " + apiKey)
+        // console.log("Google Gemini API init.")
+        // console.log("Model name: " + modelName)
+        // console.log("Max tokens: " + maxTokens)
+        // console.log("API key: " + apiKey)
         try {
             if (!models_list.includes(modelName)) {
                 throw new Error("Model not found.");
@@ -45,7 +45,7 @@ export class GoogleGeminiApi implements AiAssistantInterface {
             const genAI = new GoogleGenerativeAI(apiKey);
             this.model = genAI.getGenerativeModel({ model: modelName });
         } catch (error) {
-            console.log(error);
+            // console.log(error);
             throw new Error(error);
         }
     }
@@ -69,8 +69,8 @@ export class GoogleGeminiApi implements AiAssistantInterface {
             // concatenate all prompts
             let prompt = "";
             prompt = prompt_list.map((p) => p.content).join("\n");
-            console.log(prompt_list);
-            console.log("Prompt: " + prompt);
+            // console.log(prompt_list);
+            // console.log("Prompt: " + prompt);
 
             if (streamMode) {
                 const result = await this.model.generateContentStream(prompt);
@@ -103,7 +103,7 @@ export class GoogleGeminiApi implements AiAssistantInterface {
                 return text;
             }
         } catch (err) {
-            console.log(err);
+            // console.log(err);
             this.display_error(err);
         }
     };
@@ -133,14 +133,14 @@ export class GoogleGeminiApi implements AiAssistantInterface {
 
         const chat = this.model.startChat(chat_config);
 
-        console.log("chat_config:\n", chat_config)
-        console.log("msg:\n", msg);
+        // console.log("chat_config:\n", chat_config)
+        // console.log("msg:\n", msg);
     
 
         const result = await chat.sendMessage(msg);
         const response = await result.response;
         const text = response.text();
-        console.log(text);
+        // console.log(text);
 
         let responseText = "";
         const content = response.text();
