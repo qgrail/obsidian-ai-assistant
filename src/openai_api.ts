@@ -82,6 +82,14 @@ export class OpenAIAssistant implements AiAssistantInterface {
 		}
 	};
 
+	chat = async(
+		prompt_list: { [key: string]: string }[],
+		htmlEl?: HTMLElement,
+		view?: MarkdownView
+	) => {
+		return await this.api_call(prompt_list, htmlEl, view);
+	}
+
 	img_api_call = async (
 		model: string,
 		prompt: string,

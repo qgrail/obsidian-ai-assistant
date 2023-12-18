@@ -169,9 +169,9 @@ export class ChatModal extends Modal {
 	ai_model: AiAssistantInterface;
 	is_generating_answer: boolean;
 
-	constructor(app: App, openai: any) {
+	constructor(app: App, ai_model: AiAssistantInterface) {
 		super(app);
-		this.ai_model = openai;
+		this.ai_model = ai_model;
 		this.is_generating_answer = false;
 	}
 
@@ -201,7 +201,7 @@ export class ChatModal extends Modal {
 			const view = this.app.workspace.getActiveViewOfType(
 				MarkdownView
 			) as MarkdownView;
-			const answer = await this.ai_model.api_call(
+			const answer = await this.ai_model.chat(
 				this.prompt_table,
 				answers[answers.length - 1] as HTMLElement, // Cast 'Element' to 'HTMLElement'
 				view

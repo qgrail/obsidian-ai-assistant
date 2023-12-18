@@ -10,24 +10,24 @@ const models_list = [
 ]
 
 
-import { AiAssistantInterface , AiSettingTab} from "./api_interface";
+import { AiAssistantInterface, AiSettingTab } from "./api_interface";
 
 export const GoogleGeminiSettingTab: AiSettingTab = {
-	models: {
-		"gemini-pro":"gemini-pro", 
-        "embedding-001":"embedding-001", 
-        "aqa":"aqa"
-	},
-	imgModels: {
+    models: {
+        "gemini-pro": "gemini-pro",
+        "embedding-001": "embedding-001",
+        "aqa": "aqa"
+    },
+    imgModels: {
         "gemini-pro-vision": "gemini-pro-vision",
-	},
+    },
 }
 
 export class GoogleGeminiApi implements AiAssistantInterface {
-	modelName: string;
-	model: any;
-	maxTokens: number;
-	apiKey: string;
+    modelName: string;
+    model: any;
+    maxTokens: number;
+    apiKey: string;
 
     constructor(apiKey: string, modelName: string, maxTokens: number) {
         this.modelName = modelName;
@@ -43,7 +43,7 @@ export class GoogleGeminiApi implements AiAssistantInterface {
                 throw new Error("Model not found.");
             }
             const genAI = new GoogleGenerativeAI(apiKey);
-            this.model =  genAI.getGenerativeModel({model: modelName});
+            this.model = genAI.getGenerativeModel({ model: modelName });
         } catch (error) {
             console.log(error);
             throw new Error(error);
@@ -94,9 +94,8 @@ export class GoogleGeminiApi implements AiAssistantInterface {
                     }
                 }
                 return htmlEl.innerHTML;
-            } 
-            else 
-            {
+            }
+            else {
                 const result = await this.model.generateContent(prompt);
                 const response = await result.response;
                 const text = response.text();
@@ -109,13 +108,66 @@ export class GoogleGeminiApi implements AiAssistantInterface {
         }
     };
 
+    chat = async (
+        prompt_list: { [key: string]: string }[],
+        htmlEl: HTMLElement,
+        view?: MarkdownView
+    ) => {
+        var new_prompt_list = prompt_list.map((p) => {
+            return {
+                role: p.role === "user" ? "user" : "model",
+                parts: p.content,
+            };
+        });
+
+        // get the last prompt and remove it from the list
+        const last_prompt = new_prompt_list.pop();
+        const msg = last_prompt?.parts;
+
+        const chat_config = {
+            history: new_prompt_list,
+            generationConfig: {
+                maxOutputTokens: this.maxTokens,
+            }
+        };
+
+        const chat = this.model.startChat(chat_config);
+
+        console.log("chat_config:\n", chat_config)
+        console.log("msg:\n", msg);
+    
+
+        const result = await chat.sendMessage(msg);
+        const response = await result.response;
+        const text = response.text();
+        console.log(text);
+
+        let responseText = "";
+        const content = response.text();
+        if (content) {
+            responseText = responseText.concat(content);
+            htmlEl.innerHTML = "";
+            if (view) {
+                await MarkdownRenderer.renderMarkdown(
+                    responseText,
+                    htmlEl,
+                    "",
+                    view
+                );
+            } else {
+                htmlEl.innerHTML += responseText;
+            }
+        }
+        return htmlEl.innerHTML;
+    }
+
     img_api_call = async (
-		model: string,
-		prompt: string,
-		img_size: string,
-		num_img: number,
-		is_hd: boolean
-	) => {
+        model: string,
+        prompt: string,
+        img_size: string,
+        num_img: number,
+        is_hd: boolean
+    ) => {
         throw new Error("Method not implemented for Goole Gemini.");
     }
 }

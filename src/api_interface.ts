@@ -14,6 +14,12 @@ export interface AiAssistantInterface {
         view?: MarkdownView
     ) => Promise<string>;
 
+    chat: (
+        prompt_list: { [key: string]: string }[],
+        htmlEl?: HTMLElement,
+        view?: MarkdownView
+    ) => Promise<string>;
+
 	img_api_call: (
 		model: string,
 		prompt: string,
