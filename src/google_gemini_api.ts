@@ -15,12 +15,11 @@ import { AiAssistantInterface , AiSettingTab} from "./api_interface";
 export const GoogleGeminiSettingTab: AiSettingTab = {
 	models: {
 		"gemini-pro":"gemini-pro", 
-        "gemini-pro-vision": "gemini-pro-vision", 
         "embedding-001":"embedding-001", 
         "aqa":"aqa"
 	},
 	imgModels: {
-        "none": "none",
+        "gemini-pro-vision": "gemini-pro-vision",
 	},
 }
 
@@ -69,11 +68,12 @@ export class GoogleGeminiApi implements AiAssistantInterface {
         try {
             // concatenate all prompts
             let prompt = "";
-            prompt = prompt_list.map((p) => p.prompt).join("\n");
-
+            prompt = prompt_list.map((p) => p.content).join("\n");
+            console.log(prompt_list);
+            console.log("Prompt: " + prompt);
 
             if (streamMode) {
-                const result = await this.model.model.generateContentStream(prompt);
+                const result = await this.model.generateContentStream(prompt);
 
                 let responseText = "";
                 for await (const chunk of result.stream) {
@@ -94,13 +94,17 @@ export class GoogleGeminiApi implements AiAssistantInterface {
                     }
                 }
                 return htmlEl.innerHTML;
-            } else {
+            } 
+            else 
+            {
                 const result = await this.model.generateContent(prompt);
                 const response = await result.response;
                 const text = response.text();
+                // console.log("Response: " + text);
                 return text;
             }
         } catch (err) {
+            console.log(err);
             this.display_error(err);
         }
     };

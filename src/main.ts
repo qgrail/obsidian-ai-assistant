@@ -41,9 +41,9 @@ const DEFAULT_SETTINGS: Settings = {
 		[
 			"google", {
 				apiKey: "",
-				modelName: "gemini-pro-vision",
-				imageModelName: "none",
-				maxTokens: 100,
+				modelName: "gemini-pro",
+				imageModelName: "gemini-pro-vision",
+				maxTokens: 1000,
 				replaceSelection: true,
 				imgFolder: "AiAssistant/Assets",
 				language: "",
@@ -188,15 +188,14 @@ export default class AiAssistantPlugin extends Plugin {
 				throw new Error("Error while loading settings");
 			}
 		} catch (error) {
-			this.settings.provider = "openai";
-			this.assistantSettings = DEFAULT_SETTINGS.assistantSettings.get("openai")!;
+			this.settings.provider = "google";
+			this.assistantSettings = DEFAULT_SETTINGS.assistantSettings.get(this.settings.provider)!;
 		}
 
 		console.log("loadSettings:\n" + this.settings);
 	}
 
 	async saveSettings() {
-		console.log("saveSettings:\n" + this.settings);
 		await this.saveData(this.settings);
 	}
 }
