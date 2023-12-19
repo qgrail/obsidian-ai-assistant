@@ -31,14 +31,14 @@ const DEFAULT_SETTINGS: Settings = {
 	assistantSettings: new Map<string, AiAssistantSettings>([
 		[
 			"openai", {
-			apiKey: "",
-			modelName: "gpt-3.5-turbo",
-			imageModelName: "dall-e-3",
-			maxTokens: 500,
-			replaceSelection: false,
-			imgFolder: "AiAssistant/Assets",
-			language: "",
-		}],
+				apiKey: "",
+				modelName: "gpt-3.5-turbo",
+				imageModelName: "dall-e-3",
+				maxTokens: 500,
+				replaceSelection: false,
+				imgFolder: "AiAssistant/Assets",
+				language: "",
+			}],
 		[
 			"google", {
 				apiKey: "",
@@ -55,24 +55,32 @@ const DEFAULT_SETTINGS: Settings = {
 
 export default class AiAssistantPlugin extends Plugin {
 	settings: Settings;
-	assistantSettings: AiAssistantSettings;
+	// assistantSettings: AiAssistantSettings;
 	model: AiAssistantInterface;
 
 	build_api() {
+		if (!this.assistantSettings(this.settings.provider).apiKey || this.assistantSettings(this.settings.provider).apiKey === "") {
+			new Notice("AI Assistant: API Key is empty");
+			return;
+		}
+		if (!this.assistantSettings(this.settings.provider).modelName || this.assistantSettings(this.settings.provider).modelName === "") {
+			new Notice("AI Assistant: Model Name is empty");
+			return;
+		}
 		try {
 			switch (this.settings.provider) {
 				case "openai":
 					this.model = new OpenAIAssistant(
-						this.assistantSettings.apiKey,
-						this.assistantSettings.modelName,
-						this.assistantSettings.maxTokens,
+						this.assistantSettings(this.settings.provider).apiKey,
+						this.assistantSettings(this.settings.provider).modelName,
+						this.assistantSettings(this.settings.provider).maxTokens,
 					);
 					break;
 				case "google":
 					this.model = new GoogleGeminiApi(
-						this.assistantSettings.apiKey,
-						this.assistantSettings.modelName,
-						this.assistantSettings.maxTokens,
+						this.assistantSettings(this.settings.provider).apiKey,
+						this.assistantSettings(this.settings.provider).modelName,
+						this.assistantSettings(this.settings.provider).maxTokens,
 					);
 					break;
 				default:
@@ -82,6 +90,10 @@ export default class AiAssistantPlugin extends Plugin {
 		} catch (error) {
 			new Notice("Error while building API. Please check your settings." + error);
 		}
+	}
+
+	assistantSettings(provider: string): AiAssistantSettings {
+		return this.settings.assistantSettings.get(provider)!;
 	}
 
 	async onload() {
@@ -112,7 +124,7 @@ export default class AiAssistantPlugin extends Plugin {
 							},
 						]);
 						answer = answer!;
-						if (!this.assistantSettings.replaceSelection) {
+						if (!this.assistantSettings(this.settings.provider).replaceSelection) {
 							answer = selected_text + "\n" + answer.trim();
 						}
 						if (answer) {
@@ -133,7 +145,7 @@ export default class AiAssistantPlugin extends Plugin {
 					this.app,
 					async (prompt: { [key: string]: string }) => {
 						const answer = await this.model.img_api_call(
-							this.assistantSettings.imageModelName,
+							this.assistantSettings(this.settings.provider).imageModelName,
 							prompt["prompt_text"],
 							prompt["img_size"],
 							parseInt(prompt["num_img"]),
@@ -144,13 +156,13 @@ export default class AiAssistantPlugin extends Plugin {
 								this.app,
 								answer,
 								prompt["prompt_text"],
-								this.assistantSettings.imgFolder
+								this.assistantSettings(this.settings.provider).imgFolder
 							);
 							imageModal.open();
 						}
 					},
 					true,
-					{ model: this.assistantSettings.imageModelName }
+					{ model: this.assistantSettings(this.settings.provider).imageModelName }
 				).open();
 			},
 		});
@@ -162,7 +174,7 @@ export default class AiAssistantPlugin extends Plugin {
 				new SpeechModal(
 					this.app,
 					this.model,
-					this.assistantSettings.language,
+					this.assistantSettings(this.settings.provider).language,
 					editor
 				).open();
 			},
@@ -172,32 +184,47 @@ export default class AiAssistantPlugin extends Plugin {
 	}
 
 	onunload() {
-		this.saveSettings();
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign(
-			{},
-			DEFAULT_SETTINGS,
-			await this.loadData()
-		);
-		// convert this.settings.assistantSettings to Map<string, AiAssistantSettings>
-		this.settings.assistantSettings = new Map<string, AiAssistantSettings>(Object.entries(this.settings.assistantSettings));
-		try {
-			this.assistantSettings = this.settings.assistantSettings.get(this.settings.provider)!;
-			if (!this.assistantSettings) {
-				throw new Error("Error while loading settings");
+
+		function reviver(key: string, value: any) {
+			if (typeof value === 'object' && value !== null) {
+				if (value.dataType === 'Map') {
+					return new Map(value.value);
+				}
 			}
-		} catch (error) {
-			this.settings.provider = "google";
-			this.assistantSettings = DEFAULT_SETTINGS.assistantSettings.get(this.settings.provider)!;
+			return value;
 		}
 
-		// console.log("loadSettings:\n" + this.settings);
+		var data = await this.loadData();
+		console.log(typeof data);
+		console.log(data);
+		if (data) {
+			this.settings = JSON.parse(data, reviver);
+		} else {
+			let _ = require("lodash");
+			this.settings = _.cloneDeep(DEFAULT_SETTINGS);
+		}
+
+		// console.log("loadSettings:\n");
+		// console.log(this.settings);
 	}
 
 	async saveSettings() {
-		await this.saveData(this.settings);
+		function replacer(key: string, value: any) {
+			if (value instanceof Map) {
+				return {
+					dataType: 'Map',
+					value: Array.from(value.entries()), // or with spread: value: [...value]
+				};
+			} else {
+				return value;
+			}
+		}
+
+		// console.log("saveSettings:\n" + JSON.stringify(this.settings, replacer));
+		await this.saveData(JSON.stringify(this.settings, replacer));
 	}
 }
 
@@ -239,17 +266,10 @@ class AiAssistantSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.provider)
 					.onChange(async (value) => {
 						// save the current settings
-						this.plugin.settings.assistantSettings.set(this.plugin.settings.provider, this.plugin.assistantSettings);
 						await this.plugin.saveSettings();
 
 						// load the new settings
 						this.plugin.settings.provider = value;
-						this.plugin.assistantSettings = this.plugin.settings.assistantSettings.get(value)!;
-						if (!this.plugin.assistantSettings) {
-							this.plugin.assistantSettings = DEFAULT_SETTINGS.assistantSettings.get(value)!;
-						}
-
-						// console.log(this.plugin.assistantSettings);
 
 						switch (value) {
 							case "openai":
@@ -277,9 +297,9 @@ class AiAssistantSettingTab extends PluginSettingTab {
 			.addText((text) =>
 				text
 					.setPlaceholder("Enter your key here")
-					.setValue(this.plugin.assistantSettings.apiKey)
+					.setValue(this.plugin.assistantSettings(this.plugin.settings.provider).apiKey)
 					.onChange(async (value) => {
-						this.plugin.assistantSettings.apiKey = value;
+						this.plugin.assistantSettings(this.plugin.settings.provider).apiKey = value;
 						await this.plugin.saveSettings();
 						this.plugin.build_api();
 					})
@@ -292,9 +312,9 @@ class AiAssistantSettingTab extends PluginSettingTab {
 			.addDropdown((dropdown) =>
 				dropdown
 					.addOptions(this.setting_tab.models)
-					.setValue(this.plugin.assistantSettings.modelName)
+					.setValue(this.plugin.assistantSettings(this.plugin.settings.provider).modelName)
 					.onChange(async (value) => {
-						this.plugin.assistantSettings.modelName = value;
+						this.plugin.assistantSettings(this.plugin.settings.provider).modelName = value;
 						await this.plugin.saveSettings();
 						this.plugin.build_api();
 					})
@@ -306,13 +326,13 @@ class AiAssistantSettingTab extends PluginSettingTab {
 			.addText((text) =>
 				text
 					.setPlaceholder("Max tokens")
-					.setValue(this.plugin.assistantSettings.maxTokens.toString())
+					.setValue(this.plugin.assistantSettings(this.plugin.settings.provider).maxTokens.toString())
 					.onChange(async (value) => {
 						const int_value = parseInt(value);
 						if (!int_value || int_value <= 0) {
 							new Notice("Error while parsing maxTokens ");
 						} else {
-							this.plugin.assistantSettings.maxTokens = int_value;
+							this.plugin.assistantSettings(this.plugin.settings.provider).maxTokens = int_value;
 							await this.plugin.saveSettings();
 							this.plugin.build_api();
 						}
@@ -324,9 +344,9 @@ class AiAssistantSettingTab extends PluginSettingTab {
 			.setDesc("Replace selection")
 			.addToggle((toogle) => {
 				toogle
-					.setValue(this.plugin.assistantSettings.replaceSelection)
+					.setValue(this.plugin.assistantSettings(this.plugin.settings.provider).replaceSelection)
 					.onChange(async (value) => {
-						this.plugin.assistantSettings.replaceSelection = value;
+						this.plugin.assistantSettings(this.plugin.settings.provider).replaceSelection = value;
 						await this.plugin.saveSettings();
 						this.plugin.build_api();
 					});
@@ -338,11 +358,11 @@ class AiAssistantSettingTab extends PluginSettingTab {
 			.addText((text) =>
 				text
 					.setPlaceholder("Enter the path to you image folder")
-					.setValue(this.plugin.assistantSettings.imgFolder)
+					.setValue(this.plugin.assistantSettings(this.plugin.settings.provider).imgFolder)
 					.onChange(async (value) => {
 						const path = value.replace(/\/+$/, "");
 						if (path) {
-							this.plugin.assistantSettings.imgFolder = path;
+							this.plugin.assistantSettings(this.plugin.settings.provider).imgFolder = path;
 							await this.plugin.saveSettings();
 						} else {
 							new Notice("Image folder cannot be empty");
@@ -355,9 +375,9 @@ class AiAssistantSettingTab extends PluginSettingTab {
 			.addDropdown((dropdown) =>
 				dropdown
 					.addOptions(this.setting_tab.imgModels)
-					.setValue(this.plugin.assistantSettings.imageModelName)
+					.setValue(this.plugin.assistantSettings(this.plugin.settings.provider).imageModelName)
 					.onChange(async (value) => {
-						this.plugin.assistantSettings.imageModelName = value;
+						this.plugin.assistantSettings(this.plugin.settings.provider).imageModelName = value;
 						await this.plugin.saveSettings();
 						this.plugin.build_api();
 					})
@@ -369,9 +389,9 @@ class AiAssistantSettingTab extends PluginSettingTab {
 			.setDesc("Using ISO-639-1 format (en, zh, fr, de, ...)")
 			.addText((text) =>
 				text
-					.setValue(this.plugin.assistantSettings.language)
+					.setValue(this.plugin.assistantSettings(this.plugin.settings.provider).language)
 					.onChange(async (value) => {
-						this.plugin.assistantSettings.language = value;
+						this.plugin.assistantSettings(this.plugin.settings.provider).language = value;
 						await this.plugin.saveSettings();
 					})
 			);
