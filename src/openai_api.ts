@@ -21,10 +21,11 @@ export class OpenAIAssistant implements AiAssistantInterface {
 	maxTokens: number;
 	apiKey: string;
 
-	constructor(apiKey: string, modelName: string, maxTokens: number) {
+	constructor(apiKey: string, baseUrl: string, modelName: string, maxTokens: number) {
 		this.apiFun = new OpenAI({
 			apiKey: apiKey,
 			dangerouslyAllowBrowser: true,
+			baseURL: baseUrl,
 		});
 		this.modelName = modelName;
 		this.maxTokens = maxTokens;

@@ -19,6 +19,7 @@ interface Settings {
 
 interface AiAssistantSettings {
 	apiKey: string;
+	baseUrl: string;
 	modelName: string;
 	imageModelName: string;
 	maxTokens: number;
@@ -32,6 +33,7 @@ const DEFAULT_SETTINGS: Settings = {
 		[
 			"openai", {
 				apiKey: "",
+				baseUrl: "https://api.openai.com/v1",
 				modelName: "gpt-3.5-turbo",
 				imageModelName: "dall-e-3",
 				maxTokens: 500,
@@ -42,6 +44,7 @@ const DEFAULT_SETTINGS: Settings = {
 		[
 			"google", {
 				apiKey: "",
+				baseUrl: "https://generativelanguage.googleapis.com/v1beta/models",// no use for now
 				modelName: "gemini-pro",
 				imageModelName: "gemini-pro-vision",
 				maxTokens: 1000,
@@ -72,6 +75,7 @@ export default class AiAssistantPlugin extends Plugin {
 				case "openai":
 					this.model = new OpenAIAssistant(
 						this.assistantSettings(this.settings.provider).apiKey,
+						this.assistantSettings(this.settings.provider).baseUrl,
 						this.assistantSettings(this.settings.provider).modelName,
 						this.assistantSettings(this.settings.provider).maxTokens,
 					);
@@ -79,6 +83,7 @@ export default class AiAssistantPlugin extends Plugin {
 				case "google":
 					this.model = new GoogleGeminiApi(
 						this.assistantSettings(this.settings.provider).apiKey,
+						this.assistantSettings(this.settings.provider).baseUrl,
 						this.assistantSettings(this.settings.provider).modelName,
 						this.assistantSettings(this.settings.provider).maxTokens,
 					);
@@ -288,6 +293,21 @@ class AiAssistantSettingTab extends PluginSettingTab {
 						this.plugin.build_api();
 						// fresh the setting tab
 						this.display();
+					})
+			);
+
+		new Setting(containerEl).
+			setName("Base URL").
+			setDesc("Base URL").
+			addText((text) =>
+				text.
+					setPlaceholder("Enter your base URL here").
+					setValue(
+						this.plugin.assistantSettings(this.plugin.settings.provider).baseUrl).
+					onChange(async (value) => {
+						this.plugin.assistantSettings(this.plugin.settings.provider).baseUrl = value;
+						await this.plugin.saveSettings();
+						this.plugin.build_api();
 					})
 			);
 

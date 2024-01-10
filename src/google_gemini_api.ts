@@ -29,7 +29,7 @@ export class GoogleGeminiApi implements AiAssistantInterface {
     maxTokens: number;
     apiKey: string;
 
-    constructor(apiKey: string, modelName: string, maxTokens: number) {
+    constructor(apiKey: string, baseUrl: string, modelName: string, maxTokens: number) {
         this.modelName = modelName;
         this.apiKey = apiKey;
         this.maxTokens = maxTokens;
@@ -44,8 +44,9 @@ export class GoogleGeminiApi implements AiAssistantInterface {
             }
             const genAI = new GoogleGenerativeAI(apiKey);
             this.model = genAI.getGenerativeModel({ model: modelName });
+            console.log("Google Gemini API init success.");
         } catch (error) {
-            // console.log(error);
+            console.log(error);
             throw new Error(error);
         }
     }
