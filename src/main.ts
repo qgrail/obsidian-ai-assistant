@@ -5,6 +5,7 @@ import {
 	Plugin,
 	PluginSettingTab,
 	Setting,
+	Menu
 } from "obsidian";
 import { ChatModal, ImageModal, PromptModal, SpeechModal } from "./modal";
 import { AiAssistantInterface, AiSettingTab } from "./api_interface";
@@ -184,6 +185,59 @@ export default class AiAssistantPlugin extends Plugin {
 				).open();
 			},
 		});
+
+		this.registerEvent(
+			this.app.workspace.on("editor-menu", (menu, editor, view) => {
+				menu.addItem((item) => {
+					item
+						.setTitle("Translate Into Chinese")
+						.setIcon("document")
+						.onClick(async () => {
+							const selected_text = editor.getSelection().toString().trim();
+							let answer = await this.model.api_call([
+								{
+									role: "user",
+									content:"翻译成中文: " + selected_text,
+								},
+							]);
+							answer = answer!;
+							if (!this.assistantSettings(this.settings.provider).replaceSelection) {
+								answer = selected_text + "\n" + answer.trim();
+							}
+							if (answer) {
+								editor.replaceSelection(answer.trim());
+							}
+						});
+				});
+			})
+		);
+
+		this.registerEvent(
+			this.app.workspace.on("editor-menu", (menu, editor, view) => {
+				menu.addItem((item) => {
+					item
+						.setTitle("Translate Into English")
+						.setIcon("document")
+						.onClick(async () => {
+							const selected_text = editor.getSelection().toString().trim();
+							let answer = await this.model.api_call([
+								{
+									role: "user",
+									content:"Translate Into English: " + selected_text,
+								},
+							]);
+							answer = answer!;
+							if (!this.assistantSettings(this.settings.provider).replaceSelection) {
+								answer = selected_text + "\n" + answer.trim();
+							}
+							if (answer) {
+								editor.replaceSelection(answer.trim());
+							}
+						});
+				});
+			})
+		);
+
 
 		this.addSettingTab(new AiAssistantSettingTab(this.app, this));
 	}
