@@ -1,17 +1,31 @@
 import { MarkdownRenderer, MarkdownView, Notice } from "obsidian";
+import { AiAssistantInterface, AiSettingTab } from "./api_interface";
 
 import { OpenAI } from "openai";
 
-export class OpenAIAssistant {
+export const OpenaiSettingTab: AiSettingTab = {
+	models: {
+		"gpt-3.5-turbo": "gpt-3.5-turbo",
+		"gpt-4-1106-preview": "gpt-4-turbo",
+		"gpt-4": "gpt-4",
+	},
+	imgModels: {
+		"dall-e-3": "dall-e-3",
+		"dall-e-4": "dall-e-4",
+	},
+}
+
+export class OpenAIAssistant implements AiAssistantInterface {
 	modelName: string;
 	apiFun: any;
 	maxTokens: number;
 	apiKey: string;
 
-	constructor(apiKey: string, modelName: string, maxTokens: number) {
+	constructor(apiKey: string, baseUrl: string, modelName: string, maxTokens: number) {
 		this.apiFun = new OpenAI({
 			apiKey: apiKey,
 			dangerouslyAllowBrowser: true,
+			baseURL: baseUrl,
 		});
 		this.modelName = modelName;
 		this.maxTokens = maxTokens;
@@ -68,6 +82,14 @@ export class OpenAIAssistant {
 			this.display_error(err);
 		}
 	};
+
+	chat = async(
+		prompt_list: { [key: string]: string }[],
+		htmlEl?: HTMLElement,
+		view?: MarkdownView
+	) => {
+		return await this.api_call(prompt_list, htmlEl, view);
+	}
 
 	img_api_call = async (
 		model: string,
