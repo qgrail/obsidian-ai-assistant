@@ -7,6 +7,9 @@ The current available features of this plugin are:
 - 🖼 Image generation with DALL·E3 and DALL·E2,
 - 🗣 Speech to text with Whisper.
 
+## Latest Updates
+You can now upload images in the chat modal and start interacting with GPT4-Vision.
+
 ## How to use
 
 ### 🤖 Text Assistant
@@ -23,7 +26,7 @@ You have two commands to interact with the text assistant:
 Chat with the AI assistant from your Vault to generate content for your notes.
 From the chat, you can clic on any interaction to copy it directly to your clipboard.
 You can also copy the whole conversation.
-Chat mode now allows you to upload images to interact GPT4-Vision.
+Chat mode now allows you to upload images to interact with GPT4-Vision.
 
 
 #### Prompt mode
