@@ -3,7 +3,7 @@
 Simple plugin to enable interactions with AI models such as [OpenAI ChatGPT](https://openai.com/blog/chatgpt), [OpenAI DALL·E](https://openai.com/product/dall-e-3), [OpenAI Whisper](https://openai.com/research/whisper) directly from your [Obsidian](https://obsidian.md/) notes.
 
 The current available features of this plugin are:
-- 🤖 Text assistant with GPT-4 and GPT-3.5,
+- 🤖 Text assistant with GPT-4 and GPT-3.5 and GPT4-Vision,
 - 🖼 Image generation with DALL·E3 and DALL·E2,
 - 🗣 Speech to text with Whisper.
 
@@ -23,6 +23,7 @@ You have two commands to interact with the text assistant:
 Chat with the AI assistant from your Vault to generate content for your notes.
 From the chat, you can clic on any interaction to copy it directly to your clipboard.
 You can also copy the whole conversation.
+Chat mode now allows you to upload images to interact GPT4-Vision.
 
 
 #### Prompt mode
