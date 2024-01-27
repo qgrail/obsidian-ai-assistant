@@ -111,3 +111,12 @@
 	margin-block-start: 0;
     margin-block-end: 0;
 	}
+
+.hidden-file {
+  opacity: 0;
+  width: 0.1px;
+  height: 0.1px;
+  position: absolute;
+  overflow: hidden;
+  z-index: -1;
+}

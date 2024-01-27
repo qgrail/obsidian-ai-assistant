@@ -121,7 +121,7 @@ export class PromptModal extends Modal {
 	}
 
 	onOpen() {
-		const { contentEl } = this;
+		const {contentEl} = this;
 		this.titleEl.setText("What can I do for you?");
 
 		const input_container = contentEl.createEl("div", {
@@ -163,7 +163,7 @@ export class PromptModal extends Modal {
 
 export class ChatModal extends Modal {
 	prompt_text: string;
-	prompt_table: { [key: string]: string }[] = [];
+	prompt_table: { [key: string]: any }[] = [];
 	openai: any;
 	is_generating_answer: boolean;
 
@@ -216,8 +216,8 @@ export class ChatModal extends Modal {
 		}
 	};
 
-	async displayModalContent() {
-		const { contentEl } = this;
+	displayModalContent = async () => {
+		const {contentEl} = this;
 		const container = this.contentEl.createEl("div", {
 			cls: "chat-modal-container",
 		});
@@ -237,10 +237,27 @@ export class ChatModal extends Modal {
 					view
 				);
 			} else {
-				div.createEl("p", {
-					text: x["content"],
-				});
+				if (Array.isArray(x["content"])) {
+					const content = x["content"][0];
+					if (content["type"] === "text") {
+						div.createEl("p", {
+							text: content["text"],
+						});
+					} else {
+						const image = div.createEl("img", {cls: "image-modal-image"});
+						image.setAttribute(
+							'src',
+							content["image_url"]["url"],
+						);
+					}
+
+				} else {
+					div.createEl("p", {
+						text: x["content"],
+					});
+				}
 			}
+
 			div.addEventListener("click", async () => {
 				await navigator.clipboard.writeText(x["content"]);
 				new Notice(x["content"] + " Copied to clipboard!");
@@ -259,27 +276,43 @@ export class ChatModal extends Modal {
 			cls: "chat-button-container-right",
 		});
 
-		// const record_button = right_button_container.createEl("button", {
-		// 	text: "Record",
-		// });
-		// record_button.addEventListener(
-		// 	"click",
-		// 	(event: MouseEvent) => new Notice("Not implemented yet")
-		// );
-		//
-		// const read_button = right_button_container.createEl("button", {
-		// 	text: "Read",
-		// });
-		// read_button.addEventListener("click", (event: MouseEvent) => {
-		// 	new Notice("Test generation");
-		//
-		// 	if (this.prompt_table.at(-1)) {
-		// 		this.openai.text_to_speech_call(
-		// 			// @ts-ignore
-		// 			this.prompt_table.at(-1).content
-		// 		);
-		// 	}
-		// });
+		// Upload image from file
+		const hidden_add_file_button = right_button_container.createEl("input", {
+			type: "file",
+			cls: "hidden-file"
+		});
+		hidden_add_file_button.setAttribute("accept", ".png, .jpg, .jpeg");
+
+		hidden_add_file_button.addEventListener('change', async (e: Event) => {
+				const files = (e.target as HTMLInputElement).files;
+				if (files && files.length > 0) {
+					const base64String = await convertBlobToBase64(files[0]);
+					this.prompt_table.push({
+						"role": "user",
+						"content":
+							[{
+								"type": "image_url",
+								"image_url": {
+									"url": base64String,
+									"detail": "medium"
+								},
+							}],
+
+					});
+					this.clearModalContent();
+					this.displayModalContent();
+				}
+			}
+		);
+
+		// Create a simple button element that will function as the add_file_button
+		const add_file_button = right_button_container.createEl("button");
+		add_file_button.innerHTML = "&#x1F4F7;"
+
+		// Programmatically trigger hidden_add_file_button click
+		add_file_button.addEventListener('click', () => {
+			hidden_add_file_button.click();
+		});
 
 		const input_field = right_button_container.createEl("input", {
 			placeholder: "Your prompt here",
@@ -327,6 +360,18 @@ export class ChatModal extends Modal {
 			await navigator.clipboard.writeText(conversation);
 			new Notice("Conversation copied to clipboard");
 		});
+
+
+		const convertBlobToBase64 = (blob: Blob): Promise<string> => {
+			return new Promise((resolve, reject) => {
+				const reader = new FileReader();
+				reader.onerror = () => reject(reader.error);
+				reader.onload = () => {
+					resolve(reader.result as string);
+				};
+				reader.readAsDataURL(blob);
+			});
+		};
 	}
 
 	onOpen() {
@@ -386,8 +431,9 @@ export class ImageModal extends Modal {
 			});
 		}
 	}
+
 	downloadImage = async (url: string, path: string) => {
-		const response = await requestUrl({ url: url });
+		const response = await requestUrl({url: url});
 		await this.app.vault.adapter.writeBinary(path, response.arrayBuffer);
 	};
 
@@ -511,7 +557,7 @@ export class SpeechModal extends Modal {
 	};
 
 	async onOpen() {
-		const { contentEl } = this;
+		const {contentEl} = this;
 		this.titleEl.setText("Speech to Text");
 
 		let mimeType: string;
@@ -522,7 +568,7 @@ export class SpeechModal extends Modal {
 			mimeType = "video/mp4";
 		}
 
-		const constraints = { audio: true };
+		const constraints = {audio: true};
 
 		const button_container = contentEl.createEl("div", {
 			cls: "speech-modal-container",
