@@ -7,6 +7,7 @@ import {
 	Notice,
 	requestUrl,
 } from "obsidian";
+import { AnthropicAssistant, OpenAIAssistant } from "./openai_api";
 
 export class PromptModal extends Modal {
 	param_dict: { [key: string]: string };
@@ -18,7 +19,7 @@ export class PromptModal extends Modal {
 		app: App,
 		onSubmit: (x: object) => void,
 		is_img_modal: boolean,
-		settings: { [key: string]: string }
+		settings: { [key: string]: string },
 	) {
 		super(app);
 		this.onSubmit = onSubmit;
@@ -82,7 +83,7 @@ export class PromptModal extends Modal {
 
 			const num_img_dropdown = prompt_right_container.createEl("select");
 			const num_choices = [...Array(10).keys()].map((x) =>
-				(x + 1).toString()
+				(x + 1).toString(),
 			);
 			num_choices.forEach((option) => {
 				const optionEl = num_img_dropdown.createEl("option", {
@@ -121,7 +122,7 @@ export class PromptModal extends Modal {
 	}
 
 	onOpen() {
-		const {contentEl} = this;
+		const { contentEl } = this;
 		this.titleEl.setText("What can I do for you?");
 
 		const input_container = contentEl.createEl("div", {
@@ -164,12 +165,12 @@ export class PromptModal extends Modal {
 export class ChatModal extends Modal {
 	prompt_text: string;
 	prompt_table: { [key: string]: any }[] = [];
-	openai: any;
+	aiAssistant: any;
 	is_generating_answer: boolean;
 
-	constructor(app: App, openai: any) {
+	constructor(app: App, assistant: OpenAIAssistant) {
 		super(app);
-		this.openai = openai;
+		this.aiAssistant = assistant;
 		this.is_generating_answer = false;
 	}
 
@@ -178,16 +179,42 @@ export class ChatModal extends Modal {
 		this.prompt_text = "";
 	}
 
+	is_anthropic_img = (el: any): boolean => {
+		return (
+			Array.isArray(el["content"]) &&
+			el["content"][el["content"].length - 1]["type"] === "image" &&
+			"source" in el["content"][el["content"].length - 1]
+		);
+	};
+
 	send_action = async () => {
 		if (this.prompt_text && !this.is_generating_answer) {
 			this.is_generating_answer = true;
-			const prompt = {
-				role: "user",
-				content: this.prompt_text,
-			};
 
-			this.prompt_table.push(prompt, {
+			// For Anthropic, we need to merge text and image in the same content.
+			let merge_text_img = false;
+			if (this.prompt_table.length > 0) {
+				const lastElement =
+					this.prompt_table[this.prompt_table.length - 1];
+				if (this.is_anthropic_img(lastElement)) {
+					lastElement["content"].push({
+						type: "text",
+						text: this.prompt_text,
+					});
+					merge_text_img = true;
+				}
+			}
+
+			if (!merge_text_img) {
+				this.prompt_table.push({
+					role: "user",
+					content: this.prompt_text,
+				});
+			}
+
+			this.prompt_table.push({
 				role: "assistant",
+				content: "Generating Answer...",
 			});
 
 			this.clearModalContent();
@@ -197,12 +224,12 @@ export class ChatModal extends Modal {
 			const answers =
 				this.modalEl.getElementsByClassName("chat-div assistant");
 			const view = this.app.workspace.getActiveViewOfType(
-				MarkdownView
+				MarkdownView,
 			) as MarkdownView;
-			const answer = await this.openai.api_call(
+			const answer = await this.aiAssistant.text_api_call(
 				this.prompt_table,
 				answers[answers.length - 1],
-				view
+				view,
 			);
 			if (answer) {
 				this.prompt_table.push({
@@ -217,12 +244,12 @@ export class ChatModal extends Modal {
 	};
 
 	displayModalContent = async () => {
-		const {contentEl} = this;
+		const { contentEl } = this;
 		const container = this.contentEl.createEl("div", {
 			cls: "chat-modal-container",
 		});
 		const view = this.app.workspace.getActiveViewOfType(
-			MarkdownView
+			MarkdownView,
 		) as MarkdownView;
 
 		for (const x of this.prompt_table) {
@@ -234,23 +261,32 @@ export class ChatModal extends Modal {
 					x["content"],
 					div,
 					"",
-					view
+					view,
 				);
 			} else {
 				if (Array.isArray(x["content"])) {
-					const content = x["content"][0];
-					if (content["type"] === "text") {
-						div.createEl("p", {
-							text: content["text"],
-						});
-					} else {
-						const image = div.createEl("img", {cls: "image-modal-image"});
-						image.setAttribute(
-							'src',
-							content["image_url"]["url"],
-						);
-					}
-
+					x["content"].forEach((content) => {
+						if (content["type"] === "text") {
+							div.createEl("p", {
+								text: content["text"],
+							});
+						} else {
+							const image = div.createEl("img", {
+								cls: "image-modal-image",
+							});
+							if ("source" in content) {
+								image.setAttribute(
+									"src",
+									`data:${content["source"]["media_type"]};base64,${content["source"]["data"]}`,
+								);
+							} else {
+								image.setAttribute(
+									"src",
+									content["image_url"]["url"],
+								);
+							}
+						}
+					});
 				} else {
 					div.createEl("p", {
 						text: x["content"],
@@ -277,40 +313,56 @@ export class ChatModal extends Modal {
 		});
 
 		// Upload image from file
-		const hidden_add_file_button = right_button_container.createEl("input", {
-			type: "file",
-			cls: "hidden-file"
-		});
+		const hidden_add_file_button = right_button_container.createEl(
+			"input",
+			{
+				type: "file",
+				cls: "hidden-file",
+			},
+		);
 		hidden_add_file_button.setAttribute("accept", ".png, .jpg, .jpeg");
 
-		hidden_add_file_button.addEventListener('change', async (e: Event) => {
-				const files = (e.target as HTMLInputElement).files;
-				if (files && files.length > 0) {
-					const base64String = await convertBlobToBase64(files[0]);
-					this.prompt_table.push({
-						"role": "user",
-						"content":
-							[{
-								"type": "image_url",
-								"image_url": {
-									"url": base64String,
-									"detail": "medium"
-								},
-							}],
+		hidden_add_file_button.addEventListener("change", async (e: Event) => {
+			const files = (e.target as HTMLInputElement).files;
 
-					});
-					this.clearModalContent();
-					this.displayModalContent();
+			if (files && files.length > 0) {
+				const base64String = await convertBlobToBase64(files[0]);
+				let content;
+				if (this.aiAssistant instanceof AnthropicAssistant) {
+					const [type, data] = decode_base64(base64String);
+					content = {
+						type: "image",
+						source: {
+							type: "base64",
+							media_type: type,
+							data: data,
+						},
+					};
+				} else {
+					content = {
+						type: "image_url",
+						image_url: {
+							url: base64String,
+							detail: "auto",
+						},
+					};
 				}
+				this.prompt_table.push({
+					role: "user",
+					content: [content],
+				});
+
+				this.clearModalContent();
+				this.displayModalContent();
 			}
-		);
+		});
 
 		// Create a simple button element that will function as the add_file_button
 		const add_file_button = right_button_container.createEl("button");
-		add_file_button.innerHTML = "&#x1F4F7;"
+		add_file_button.innerHTML = "&#x1F4F7;";
 
 		// Programmatically trigger hidden_add_file_button click
-		add_file_button.addEventListener('click', () => {
+		add_file_button.addEventListener("click", () => {
 			hidden_add_file_button.click();
 		});
 
@@ -361,7 +413,6 @@ export class ChatModal extends Modal {
 			new Notice("Conversation copied to clipboard");
 		});
 
-
 		const convertBlobToBase64 = (blob: Blob): Promise<string> => {
 			return new Promise((resolve, reject) => {
 				const reader = new FileReader();
@@ -372,7 +423,17 @@ export class ChatModal extends Modal {
 				reader.readAsDataURL(blob);
 			});
 		};
-	}
+
+		const decode_base64 = (input: string): [string, string] => {
+			const commaIndex = input.indexOf(",");
+			const semiIndex = input.indexOf(";");
+			const dotIndex = input.indexOf(":");
+			const type = input.slice(dotIndex + 1, semiIndex);
+			const data = input.slice(commaIndex + 1);
+
+			return [type, data];
+		};
+	};
 
 	onOpen() {
 		this.titleEl.setText("What can I do for you?");
@@ -393,7 +454,7 @@ export class ImageModal extends Modal {
 		app: App,
 		imageUrls: string[],
 		title: string,
-		assetFolder: string
+		assetFolder: string,
 	) {
 		super(app);
 		this.imageUrls = imageUrls;
@@ -420,7 +481,7 @@ export class ImageModal extends Modal {
 			img.addEventListener("click", async () => {
 				if (this.selectedImageUrls.includes(imageUrl)) {
 					this.selectedImageUrls = this.selectedImageUrls.filter(
-						(url) => url !== imageUrl
+						(url) => url !== imageUrl,
 					);
 					img.style.border = "none";
 				} else {
@@ -433,7 +494,7 @@ export class ImageModal extends Modal {
 	}
 
 	downloadImage = async (url: string, path: string) => {
-		const response = await requestUrl({url: url});
+		const response = await requestUrl({ url: url });
 		await this.app.vault.adapter.writeBinary(path, response.arrayBuffer);
 	};
 
@@ -461,7 +522,7 @@ export class ImageModal extends Modal {
 			try {
 				await this.saveImagesToVault(
 					this.selectedImageUrls,
-					this.assetFolder
+					this.assetFolder,
 				);
 			} catch (e) {
 				new Notice("Error while downloading images");
@@ -470,7 +531,7 @@ export class ImageModal extends Modal {
 				await navigator.clipboard.writeText(
 					this.selectedImageUrls
 						.map((x) => `![](${this.getImageName(x)})`)
-						.join("\n\n") + "\n"
+						.join("\n\n") + "\n",
 				);
 			} catch (e) {
 				new Notice("Error while copying images to clipboard");
@@ -483,14 +544,14 @@ export class ImageModal extends Modal {
 export class SpeechModal extends Modal {
 	recorder: MediaRecorder;
 	gumStream: MediaStream;
-	openai: any;
+	assistant: OpenAIAssistant;
 	editor: Editor;
 	is_cancelled: boolean;
 	language: string;
 
-	constructor(app: App, openai: any, language: string, editor: Editor) {
+	constructor(app: App, assistant: any, language: string, editor: Editor) {
 		super(app);
-		this.openai = openai;
+		this.assistant = assistant;
 		this.language = language;
 		this.editor = editor;
 		this.is_cancelled = false;
@@ -506,13 +567,12 @@ export class SpeechModal extends Modal {
 
 	start_recording = async (
 		constraints: MediaStreamConstraints,
-		mimeType: string
+		mimeType: string,
 	) => {
 		try {
 			let chunks: Blob[] = [];
-			this.gumStream = await navigator.mediaDevices.getUserMedia(
-				constraints
-			);
+			this.gumStream =
+				await navigator.mediaDevices.getUserMedia(constraints);
 
 			const options = {
 				audioBitsPerSecond: 256000,
@@ -528,17 +588,17 @@ export class SpeechModal extends Modal {
 						"tmp." + mimeType.split("/").at(-1),
 						{
 							type: mimeType,
-						}
+						},
 					);
-					const answer = await this.openai.whisper_api_call(
+					const answer = await this.assistant.whisper_api_call(
 						audio,
-						this.language
+						this.language,
 					);
 
 					if (answer) {
 						this.editor.replaceRange(
 							answer,
-							this.editor.getCursor()
+							this.editor.getCursor(),
 						);
 						const newPos = {
 							line: this.editor.getCursor().line,
@@ -557,7 +617,7 @@ export class SpeechModal extends Modal {
 	};
 
 	async onOpen() {
-		const {contentEl} = this;
+		const { contentEl } = this;
 		this.titleEl.setText("Speech to Text");
 
 		let mimeType: string;
@@ -568,7 +628,7 @@ export class SpeechModal extends Modal {
 			mimeType = "video/mp4";
 		}
 
-		const constraints = {audio: true};
+		const constraints = { audio: true };
 
 		const button_container = contentEl.createEl("div", {
 			cls: "speech-modal-container",
