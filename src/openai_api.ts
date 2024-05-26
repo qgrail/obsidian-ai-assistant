@@ -1,6 +1,7 @@
 import { MarkdownRenderer, MarkdownView, Notice } from "obsidian";
 
 import { OpenAI } from "openai";
+import { request } from "obsidian";
 
 export class OpenAIAssistant {
 	modelName: string;
@@ -20,16 +21,16 @@ export class OpenAIAssistant {
 
 	display_error = (err: any) => {
 		if (err instanceof OpenAI.APIError) {
-			new Notice("## OpenAI API ## " + err);
+			new Notice(`## OpenAI API Error: ${err}.`);
 		} else {
 			new Notice(err);
 		}
 	};
 
-	api_call = async (
+	text_api_call = async (
 		prompt_list: { [key: string]: string }[],
 		htmlEl?: HTMLElement,
-		view?: MarkdownView
+		view?: MarkdownView,
 	) => {
 		const streamMode = htmlEl !== undefined;
 		const has_img = prompt_list.some((el) => Array.isArray(el.content));
@@ -57,7 +58,7 @@ export class OpenAIAssistant {
 								responseText,
 								htmlEl,
 								"",
-								view
+								view,
 							);
 						} else {
 							htmlEl.innerHTML += responseText;
@@ -78,7 +79,7 @@ export class OpenAIAssistant {
 		prompt: string,
 		img_size: string,
 		num_img: number,
-		is_hd: boolean
+		is_hd: boolean,
 	) => {
 		try {
 			const params: { [key: string]: string | number } = {};
@@ -126,6 +127,52 @@ export class OpenAIAssistant {
 			const audio = new Audio(url);
 
 			await audio.play();
+		} catch (err) {
+			this.display_error(err);
+		}
+	};
+}
+
+export class AnthropicAssistant extends OpenAIAssistant {
+	anthropicApiKey: string;
+
+	constructor(
+		openAIapiKey: string,
+		anthropicApiKey: string,
+		modelName: string,
+		maxTokens: number,
+	) {
+		super(openAIapiKey, modelName, maxTokens);
+
+		this.anthropicApiKey = anthropicApiKey;
+	}
+
+	text_api_call = async (
+		prompt_list: { [key: string]: string }[],
+		htmlEl?: HTMLElement,
+		view?: MarkdownView,
+	) => {
+		try {
+			const response = await request({
+				url: "https://api.anthropic.com/v1/messages",
+
+				method: "POST",
+
+				headers: {
+					"x-api-key": this.anthropicApiKey,
+					"anthropic-version": "2023-06-01",
+					"content-type": "application/json",
+				},
+				body: JSON.stringify({
+					model: this.modelName,
+					max_tokens: this.maxTokens,
+					messages: prompt_list,
+					// Stream mode not implemented yet.
+					stream: false,
+				}),
+			});
+
+			return JSON.parse(response).content[0].text;
 		} catch (err) {
 			this.display_error(err);
 		}

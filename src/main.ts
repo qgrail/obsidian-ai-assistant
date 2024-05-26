@@ -7,11 +7,12 @@ import {
 	Setting,
 } from "obsidian";
 import { ChatModal, ImageModal, PromptModal, SpeechModal } from "./modal";
-import { OpenAIAssistant } from "./openai_api";
+import { OpenAIAssistant, AnthropicAssistant } from "./openai_api";
 
 interface AiAssistantSettings {
 	mySetting: string;
-	apiKey: string;
+	openAIapiKey: string;
+	anthropicApiKey: string;
 	modelName: string;
 	imageModelName: string;
 	maxTokens: number;
@@ -22,7 +23,8 @@ interface AiAssistantSettings {
 
 const DEFAULT_SETTINGS: AiAssistantSettings = {
 	mySetting: "default",
-	apiKey: "",
+	openAIapiKey: "",
+	anthropicApiKey: "",
 	modelName: "gpt-3.5-turbo",
 	imageModelName: "dall-e-3",
 	maxTokens: 500,
@@ -33,14 +35,23 @@ const DEFAULT_SETTINGS: AiAssistantSettings = {
 
 export default class AiAssistantPlugin extends Plugin {
 	settings: AiAssistantSettings;
-	openai: OpenAIAssistant;
+	aiAssistant: OpenAIAssistant;
 
 	build_api() {
-		this.openai = new OpenAIAssistant(
-			this.settings.apiKey,
-			this.settings.modelName,
-			this.settings.maxTokens
-		);
+		if (this.settings.modelName.includes("claude")) {
+			this.aiAssistant = new AnthropicAssistant(
+				this.settings.openAIapiKey,
+				this.settings.anthropicApiKey,
+				this.settings.modelName,
+				this.settings.maxTokens,
+			);
+		} else {
+			this.aiAssistant = new OpenAIAssistant(
+				this.settings.openAIapiKey,
+				this.settings.modelName,
+				this.settings.maxTokens,
+			);
+		}
 	}
 
 	async onload() {
@@ -51,7 +62,7 @@ export default class AiAssistantPlugin extends Plugin {
 			id: "chat-mode",
 			name: "Open Assistant Chat",
 			callback: () => {
-				new ChatModal(this.app, this.openai).open();
+				new ChatModal(this.app, this.aiAssistant).open();
 			},
 		});
 
@@ -63,7 +74,7 @@ export default class AiAssistantPlugin extends Plugin {
 				new PromptModal(
 					this.app,
 					async (x: { [key: string]: string }) => {
-						let answer = await this.openai.api_call([
+						let answer = await this.aiAssistant.text_api_call([
 							{
 								role: "user",
 								content:
@@ -79,7 +90,7 @@ export default class AiAssistantPlugin extends Plugin {
 						}
 					},
 					false,
-					{}
+					{},
 				).open();
 			},
 		});
@@ -91,25 +102,25 @@ export default class AiAssistantPlugin extends Plugin {
 				new PromptModal(
 					this.app,
 					async (prompt: { [key: string]: string }) => {
-						const answer = await this.openai.img_api_call(
+						const answer = await this.aiAssistant.img_api_call(
 							this.settings.imageModelName,
 							prompt["prompt_text"],
 							prompt["img_size"],
 							parseInt(prompt["num_img"]),
-							prompt["is_hd"] === "true"
+							prompt["is_hd"] === "true",
 						);
 						if (answer) {
 							const imageModal = new ImageModal(
 								this.app,
 								answer,
 								prompt["prompt_text"],
-								this.settings.imgFolder
+								this.settings.imgFolder,
 							);
 							imageModal.open();
 						}
 					},
 					true,
-					{ model: this.settings.imageModelName }
+					{ model: this.settings.imageModelName },
 				).open();
 			},
 		});
@@ -120,9 +131,9 @@ export default class AiAssistantPlugin extends Plugin {
 			editorCallback: (editor: Editor) => {
 				new SpeechModal(
 					this.app,
-					this.openai,
+					this.aiAssistant,
 					this.settings.language,
-					editor
+					editor,
 				).open();
 			},
 		});
@@ -136,7 +147,7 @@ export default class AiAssistantPlugin extends Plugin {
 		this.settings = Object.assign(
 			{},
 			DEFAULT_SETTINGS,
-			await this.loadData()
+			await this.loadData(),
 		);
 	}
 
@@ -159,19 +170,27 @@ class AiAssistantSettingTab extends PluginSettingTab {
 		containerEl.empty();
 		containerEl.createEl("h2", { text: "Settings for my AI assistant." });
 
-		new Setting(containerEl)
-			.setName("API Key")
-			.setDesc("OpenAI API Key")
-			.addText((text) =>
-				text
-					.setPlaceholder("Enter your key here")
-					.setValue(this.plugin.settings.apiKey)
-					.onChange(async (value) => {
-						this.plugin.settings.apiKey = value;
-						await this.plugin.saveSettings();
-						this.plugin.build_api();
-					})
-			);
+		new Setting(containerEl).setName("OpenAI API Key").addText((text) =>
+			text
+				.setPlaceholder("Enter OpenAI key here")
+				.setValue(this.plugin.settings.openAIapiKey)
+				.onChange(async (value) => {
+					this.plugin.settings.openAIapiKey = value;
+					await this.plugin.saveSettings();
+					this.plugin.build_api();
+				}),
+		);
+
+		new Setting(containerEl).setName("Anthropic API Key").addText((text) =>
+			text
+				.setPlaceholder("Enter Anthropic key here")
+				.setValue(this.plugin.settings.anthropicApiKey)
+				.onChange(async (value) => {
+					this.plugin.settings.anthropicApiKey = value;
+					await this.plugin.saveSettings();
+					this.plugin.build_api();
+				}),
+		);
 		containerEl.createEl("h3", { text: "Text Assistant" });
 
 		new Setting(containerEl)
@@ -180,16 +199,19 @@ class AiAssistantSettingTab extends PluginSettingTab {
 			.addDropdown((dropdown) =>
 				dropdown
 					.addOptions({
-						"gpt-3.5-turbo": "gpt-3.5-turbo",
-						"gpt-4-turbo-preview": "gpt-4-turbo",
 						"gpt-4": "gpt-4",
+						"gpt-4-turbo-preview": "gpt-4-turbo",
+						"gpt-3.5-turbo": "gpt-3.5-turbo",
+						"claude-3-opus-20240229": "Claude 3 Opus",
+						"claude-3-sonnet-20240229": "Claude 3 Sonnet",
+						"claude-3-haiku-20240307": "Claude 3 Haiku",
 					})
 					.setValue(this.plugin.settings.modelName)
 					.onChange(async (value) => {
 						this.plugin.settings.modelName = value;
 						await this.plugin.saveSettings();
 						this.plugin.build_api();
-					})
+					}),
 			);
 
 		new Setting(containerEl)
@@ -208,7 +230,7 @@ class AiAssistantSettingTab extends PluginSettingTab {
 							await this.plugin.saveSettings();
 							this.plugin.build_api();
 						}
-					})
+					}),
 			);
 
 		new Setting(containerEl)
@@ -239,7 +261,7 @@ class AiAssistantSettingTab extends PluginSettingTab {
 						} else {
 							new Notice("Image folder cannot be empty");
 						}
-					})
+					}),
 			);
 		new Setting(containerEl)
 			.setName("Image Model Name")
@@ -255,7 +277,7 @@ class AiAssistantSettingTab extends PluginSettingTab {
 						this.plugin.settings.imageModelName = value;
 						await this.plugin.saveSettings();
 						this.plugin.build_api();
-					})
+					}),
 			);
 
 		containerEl.createEl("h3", { text: "Speech to Text" });
@@ -268,7 +290,7 @@ class AiAssistantSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.language = value;
 						await this.plugin.saveSettings();
-					})
+					}),
 			);
 	}
 }
