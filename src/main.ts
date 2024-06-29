@@ -5,6 +5,7 @@ import {
 	Plugin,
 	PluginSettingTab,
 	Setting,
+	Vault,
 } from "obsidian";
 import { ChatModal, ImageModal, PromptModal, SpeechModal } from "./modal";
 import { OpenAIAssistant, AnthropicAssistant } from "./openai_api";
@@ -15,6 +16,7 @@ interface AiAssistantSettings {
 	anthropicApiKey: string;
 	modelName: string;
 	imageModelName: string;
+	fileNameWithSystemPromptForAI: string;
 	maxTokens: number;
 	replaceSelection: boolean;
 	imgFolder: string;
@@ -27,6 +29,7 @@ const DEFAULT_SETTINGS: AiAssistantSettings = {
 	anthropicApiKey: "",
 	modelName: "gpt-3.5-turbo",
 	imageModelName: "dall-e-3",
+	fileNameWithSystemPromptForAI: "System Prompt for AI.md",
 	maxTokens: 500,
 	replaceSelection: true,
 	imgFolder: "AiAssistant/Assets",
@@ -67,14 +70,56 @@ export default class AiAssistantPlugin extends Plugin {
 		});
 
 		this.addCommand({
+			id: "rewrite",
+			name: "Open Assistant Rewrite",
+			editorCallback: async (editor: Editor) => {
+				const fileName = this.settings.fileNameWithSystemPromptForAI; // replace with your specific file name
+				const files = this.app.vault.getFiles();
+				
+				// Find the file with the specified name
+				const file = files.find(f => f.name === fileName);
+				
+				if (!file) {
+				   console.error(`File '${fileName}' not found.`);
+				   return;
+				}
+				
+				// Read the content of the specific file
+				const systemPromptText = await this.app.vault.read(file);
+
+				console.debug (systemPromptText);
+				
+
+				const selected_text = editor.getSelection().toString().trim();
+				let answer = await this.aiAssistant.text_api_call([
+					{
+						role: "system",
+						content: systemPromptText,
+					},						
+					{
+						role: "user",
+						content: selected_text,
+					},
+				]);
+				answer = answer!;
+				if (!this.settings.replaceSelection) {
+					answer = selected_text + "\n" + answer.trim();
+				}
+				if (answer) {
+					editor.replaceSelection(answer.trim());
+				}
+			},
+		});
+
+		this.addCommand({
 			id: "prompt-mode",
-			name: "Open Assistant Prompt",
+			name: "Open Assistant Promt",
 			editorCallback: async (editor: Editor) => {
 				const selected_text = editor.getSelection().toString().trim();
 				new PromptModal(
 					this.app,
 					async (x: { [key: string]: string }) => {
-						let answer = await this.aiAssistant.text_api_call([
+						let answer = await this.aiAssistant.text_api_call([					
 							{
 								role: "user",
 								content:
@@ -232,6 +277,17 @@ class AiAssistantSettingTab extends PluginSettingTab {
 						}
 					}),
 			);
+
+		new Setting(containerEl).setName("File with AI System Prompt").addText((text) =>
+			text
+				.setPlaceholder("File Name")
+				.setValue(this.plugin.settings.fileNameWithSystemPromptForAI)
+				.onChange(async (value) => {
+					this.plugin.settings.fileNameWithSystemPromptForAI = value;
+					await this.plugin.saveSettings();
+					this.plugin.build_api();
+				}),
+		);
 
 		new Setting(containerEl)
 			.setName("Prompt behavior")
