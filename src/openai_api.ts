@@ -31,10 +31,13 @@ export class OpenAIAssistant {
 		prompt_list: { [key: string]: string }[],
 		htmlEl?: HTMLElement,
 		view?: MarkdownView,
+		temperature: number = 0.5
 	) => {
 		const streamMode = htmlEl !== undefined;
 		const has_img = prompt_list.some((el) => Array.isArray(el.content));
 		let model = this.modelName;
+		console.log (prompt_list);
+		console.log ("temperature: " + temperature);
 		if (has_img) {
 			model = "gpt-4-vision-preview";
 		}
@@ -44,6 +47,7 @@ export class OpenAIAssistant {
 				model: model,
 				max_tokens: this.maxTokens,
 				stream: streamMode,
+				temperature: temperature,
 			});
 
 			if (streamMode) {
