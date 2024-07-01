@@ -5,8 +5,9 @@ import {
 	Plugin,
 	PluginSettingTab,
 	Setting,
+	Vault,
 } from "obsidian";
-import { ChatModal, ImageModal, PromptModal, SpeechModal } from "./modal";
+import { ChatModal, ChoiceModal, ImageModal, PromptModal, SpeechModal } from "./modal";
 import { OpenAIAssistant, AnthropicAssistant } from "./openai_api";
 
 interface AiAssistantSettings {
@@ -15,6 +16,8 @@ interface AiAssistantSettings {
 	anthropicApiKey: string;
 	modelName: string;
 	imageModelName: string;
+	fileNameWithSystemPromptForAI: string;
+	temperature: number;
 	maxTokens: number;
 	replaceSelection: boolean;
 	imgFolder: string;
@@ -27,7 +30,9 @@ const DEFAULT_SETTINGS: AiAssistantSettings = {
 	anthropicApiKey: "",
 	modelName: "gpt-3.5-turbo",
 	imageModelName: "dall-e-3",
+	fileNameWithSystemPromptForAI: "System Prompt for AI.md",
 	maxTokens: 500,
+	temperature: 0.5,
 	replaceSelection: true,
 	imgFolder: "AiAssistant/Assets",
 	language: "",
@@ -67,20 +72,130 @@ export default class AiAssistantPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			id: "prompt-mode",
-			name: "Open Assistant Prompt",
+			id: "rewrite",
+			name: "Open Assistant Rewrite",
 			editorCallback: async (editor: Editor) => {
+				const fileName = this.settings.fileNameWithSystemPromptForAI; // replace with your specific file name
+				const files = this.app.vault.getFiles();
+				
+				// Find the file with the specified name
+				const file = files.find(f => f.name === fileName);
+				
+				if (!file) {
+				   console.error(`File '${fileName}' not found.`);
+				   return;
+				}
+				
+				// Read the content of the specific file
+				let systemPromptText = await this.app.vault.read(file);
+
+				// Get the complete text of the current note
+				const completeText = editor.getValue().trim();
+
+				// Replace the placeholder with the complete text of the note
+				systemPromptText = systemPromptText.replace("{NODE TEXT}", completeText);
+
+
+				//console.debug (systemPromptText);
+
 				const selected_text = editor.getSelection().toString().trim();
+
+				const userPrompt = "improve: \n" + selected_text;
+
+				//console.debug (userPrompt);
+
+				let answer = await this.aiAssistant.text_api_call([
+					{
+						role: "system",
+						content: systemPromptText,
+					},						
+					{
+						role: "user",
+						content: userPrompt,
+					},
+				],undefined,undefined, this.settings.temperature);
+				answer = answer!;
+				if (!this.settings.replaceSelection) {
+					answer = selected_text + "\n" + answer.trim();
+				}
+				if (answer) {
+					editor.replaceSelection(answer.trim());
+				}
+			},
+		});
+		this.addCommand({
+			id: "choose-ai-assistant",
+			name: "Choose AI Assistant",
+			editorCallback: async (editor: Editor) => {
+				const folderName = "AI Assistants";
+				const files = this.app.vault.getFiles();
+				
+				// Filter files in the specified folder
+				const assistantFiles = files.filter(file => file.path.startsWith(folderName + "/"));
+				const assistantNames = assistantFiles.map(file => file.name);
+		
+				// Function to handle the user's choice
+				const onSubmit = (selectedAssistantFile: string) => {
+					// Store the selected assistant file name in the settings
+					this.settings.fileNameWithSystemPromptForAI = selectedAssistantFile;
+					new Notice(`AI Assistant set to: ${selectedAssistantFile}`);
+				};
+		
+				// Open the choice modal
+				const choiceModal = new ChoiceModal(this.app, onSubmit);
+				choiceModal.build_choice_modal(assistantNames);
+				choiceModal.open();
+			},
+		});
+
+		this.addCommand({
+			id: "prompt-mode",
+			name: "Open Assistant Promt",
+			editorCallback: async (editor: Editor) => {
+
+				const fileName = this.settings.fileNameWithSystemPromptForAI;
+				const files = this.app.vault.getFiles();
+				
+				// Find the file with the specified name
+				const file = files.find(f => f.name === fileName);
+				
+				if (!file) {
+				   console.error(`File '${fileName}' not found.`);
+				   return;
+				}
+				
+				// Read the content of the specific file
+				let systemPromptText = await this.app.vault.read(file);
+
+				// Get the complete text of the current note
+				const completeText = editor.getValue().trim();
+
+				// Replace the placeholder with the complete text of the note
+				systemPromptText = systemPromptText.replace("{NODE TEXT}", completeText);
+
+
+				//console.debug (systemPromptText);
+
+				const selected_text = editor.getSelection().toString().trim();
+
+
 				new PromptModal(
 					this.app,
 					async (x: { [key: string]: string }) => {
-						let answer = await this.aiAssistant.text_api_call([
+						const userPrompt = x["prompt_text"] + ": \n" + selected_text;
+
+						//console.debug (userPrompt);
+
+						let answer = await this.aiAssistant.text_api_call([					
+							{
+								role: "system",
+								content: systemPromptText,
+							},						
 							{
 								role: "user",
-								content:
-									x["prompt_text"] + " : " + selected_text,
+								content: userPrompt,
 							},
-						]);
+						],undefined,undefined, this.settings.temperature);
 						answer = answer!;
 						if (!this.settings.replaceSelection) {
 							answer = selected_text + "\n" + answer.trim();
@@ -232,6 +347,37 @@ class AiAssistantSettingTab extends PluginSettingTab {
 						}
 					}),
 			);
+
+		new Setting(containerEl)
+			.setName("File with AI System Prompt")
+			.setDesc("The system prompt for configuring the AI model can be defined in a node. To give the model more context, you can add the content of the node you are currently editing with {NODE TEXT} in the system prompt.")
+			.addText((text) =>
+			text
+				.setPlaceholder("File Name")
+				.setValue(this.plugin.settings.fileNameWithSystemPromptForAI)
+				.onChange(async (value) => {
+					this.plugin.settings.fileNameWithSystemPromptForAI = value;
+					await this.plugin.saveSettings();
+					this.plugin.build_api();
+				}),
+		);
+
+		new Setting(containerEl)
+			.setName("Temperature")
+			.setDesc("Set the creativity level, between 0 (more focused) and 1 (most creative)")
+			.addSlider((slider) => {
+				slider
+					.setLimits(0, 1, 0.01)
+					.setValue(this.plugin.settings.temperature)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						this.plugin.settings.temperature = value;
+						await this.plugin.saveSettings();
+						this.plugin.build_api();
+					});
+		});
+
+
 
 		new Setting(containerEl)
 			.setName("Prompt behavior")
