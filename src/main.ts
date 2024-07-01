@@ -7,7 +7,7 @@ import {
 	Setting,
 	Vault,
 } from "obsidian";
-import { ChatModal, ImageModal, PromptModal, SpeechModal } from "./modal";
+import { ChatModal, ChoiceModal, ImageModal, PromptModal, SpeechModal } from "./modal";
 import { OpenAIAssistant, AnthropicAssistant } from "./openai_api";
 
 interface AiAssistantSettings {
@@ -121,6 +121,30 @@ export default class AiAssistantPlugin extends Plugin {
 				if (answer) {
 					editor.replaceSelection(answer.trim());
 				}
+			},
+		});
+		this.addCommand({
+			id: "choose-ai-assistant",
+			name: "Choose AI Assistant",
+			editorCallback: async (editor: Editor) => {
+				const folderName = "AI Assistants";
+				const files = this.app.vault.getFiles();
+				
+				// Filter files in the specified folder
+				const assistantFiles = files.filter(file => file.path.startsWith(folderName + "/"));
+				const assistantNames = assistantFiles.map(file => file.name);
+		
+				// Function to handle the user's choice
+				const onSubmit = (selectedAssistantFile: string) => {
+					// Store the selected assistant file name in the settings
+					this.settings.fileNameWithSystemPromptForAI = selectedAssistantFile;
+					new Notice(`AI Assistant set to: ${selectedAssistantFile}`);
+				};
+		
+				// Open the choice modal
+				const choiceModal = new ChoiceModal(this.app, onSubmit);
+				choiceModal.build_choice_modal(assistantNames);
+				choiceModal.open();
 			},
 		});
 

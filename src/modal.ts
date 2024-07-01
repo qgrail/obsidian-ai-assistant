@@ -9,6 +9,36 @@ import {
 } from "obsidian";
 import { AnthropicAssistant, OpenAIAssistant } from "./openai_api";
 
+export class ChoiceModal extends Modal {
+	onSubmit: (choice: string) => void;
+
+	constructor(app: App, onSubmit: (choice: string) => void) {
+		super(app);
+		this.onSubmit = onSubmit;
+	}
+
+	build_choice_modal(choices: string[]) {
+		this.titleEl.setText("Choose an AI Assistant");
+
+		const choiceContainer = this.contentEl.createEl("div", {
+			cls: "choice-modal-container",
+		});
+
+		const dropdown = choiceContainer.createEl("select");
+		choices.forEach(choice => {
+			const option = dropdown.createEl("option", { text: choice });
+			option.value = choice;
+		});
+
+		const submitButton = choiceContainer.createEl("button", { text: "Submit", cls: "mod-cta", });
+		submitButton.addEventListener("click", () => {
+			const selectedChoice = dropdown.value;
+			this.onSubmit(selectedChoice);
+			this.close();
+		});
+	}
+}
+
 export class PromptModal extends Modal {
 	param_dict: { [key: string]: string };
 	onSubmit: (input_dict: object) => void;
