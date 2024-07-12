@@ -4,13 +4,13 @@ Simple plugin to enable interactions with AI models such as [OpenAI ChatGPT](htt
 
 The current available features of this plugin are:
 
--   🤖 Text assistant with OpenQI GPT-4, GPT-3.5, GPT4-Vision, and Anthropic Claude Opus, Sonnet and Haiku.
+-   🤖 Text assistant with OpenAI GPTs and Anthropic Claude models,
 -   🖼 Image generation with DALL·E3 and DALL·E2,
 -   🗣 Speech to text with Whisper.
 
 ## Latest Updates
 
--   Claude models are now available.
+- Claude Sonnet 3.5 and GPT-4o are available.
 
 ## How to use
 
