@@ -25,7 +25,7 @@ const DEFAULT_SETTINGS: AiAssistantSettings = {
 	mySetting: "default",
 	openAIapiKey: "",
 	anthropicApiKey: "",
-	modelName: "gpt-3.5-turbo",
+	modelName: "gpt-4o",
 	imageModelName: "dall-e-3",
 	maxTokens: 500,
 	replaceSelection: true,
@@ -199,11 +199,12 @@ class AiAssistantSettingTab extends PluginSettingTab {
 			.addDropdown((dropdown) =>
 				dropdown
 					.addOptions({
+						"gpt-4o	": "gpt-4o",
 						"gpt-4": "gpt-4",
-						"gpt-4-turbo-preview": "gpt-4-turbo",
+						"gpt-4-turbo": "gpt-4-turbo",
 						"gpt-3.5-turbo": "gpt-3.5-turbo",
 						"claude-3-opus-20240229": "Claude 3 Opus",
-						"claude-3-sonnet-20240229": "Claude 3 Sonnet",
+						"claude-3-5-sonnet-20240620": "Claude 3.5 Sonnet",
 						"claude-3-haiku-20240307": "Claude 3 Haiku",
 					})
 					.setValue(this.plugin.settings.modelName)
