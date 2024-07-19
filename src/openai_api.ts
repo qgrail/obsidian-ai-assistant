@@ -9,7 +9,7 @@ export class OpenAIAssistant {
 	maxTokens: number;
 	apiKey: string;
 
-	constructor(apiKey: string, modelName: string, maxTokens: number) {
+	constructor(apiKey: string, baseURL: string, modelName: string, maxTokens: number) {
 		this.apiFun = new OpenAI({
 			apiKey: apiKey,
 			dangerouslyAllowBrowser: true,
@@ -17,6 +17,10 @@ export class OpenAIAssistant {
 		this.modelName = modelName;
 		this.maxTokens = maxTokens;
 		this.apiKey = apiKey;
+
+		if (baseURL !== "") {
+			this.apiFun.baseURL = baseURL;
+		}
 	}
 
 	display_error = (err: any) => {
@@ -142,7 +146,7 @@ export class AnthropicAssistant extends OpenAIAssistant {
 		modelName: string,
 		maxTokens: number,
 	) {
-		super(openAIapiKey, modelName, maxTokens);
+		super(openAIapiKey, "", modelName, maxTokens);
 
 		this.anthropicApiKey = anthropicApiKey;
 	}

@@ -12,6 +12,7 @@ import { OpenAIAssistant, AnthropicAssistant } from "./openai_api";
 interface AiAssistantSettings {
 	mySetting: string;
 	openAIapiKey: string;
+	openAIapiBaseURL: string;
 	anthropicApiKey: string;
 	modelName: string;
 	imageModelName: string;
@@ -24,6 +25,7 @@ interface AiAssistantSettings {
 const DEFAULT_SETTINGS: AiAssistantSettings = {
 	mySetting: "default",
 	openAIapiKey: "",
+	openAIapiBaseURL: "",
 	anthropicApiKey: "",
 	modelName: "gpt-4o",
 	imageModelName: "dall-e-3",
@@ -48,6 +50,7 @@ export default class AiAssistantPlugin extends Plugin {
 		} else {
 			this.aiAssistant = new OpenAIAssistant(
 				this.settings.openAIapiKey,
+				this.settings.openAIapiBaseURL,
 				this.settings.modelName,
 				this.settings.maxTokens,
 			);
@@ -176,6 +179,17 @@ class AiAssistantSettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.openAIapiKey)
 				.onChange(async (value) => {
 					this.plugin.settings.openAIapiKey = value;
+					await this.plugin.saveSettings();
+					this.plugin.build_api();
+				}),
+		);
+
+		new Setting(containerEl).setName("OpenAI API BaseURL").addText((text) =>
+			text
+				.setPlaceholder("Enter OpenAI BaseURL here")
+				.setValue(this.plugin.settings.openAIapiBaseURL)
+				.onChange(async (value) => {
+					this.plugin.settings.openAIapiBaseURL = value;
 					await this.plugin.saveSettings();
 					this.plugin.build_api();
 				}),
