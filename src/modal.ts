@@ -9,6 +9,65 @@ import {
 } from "obsidian";
 import { AnthropicAssistant, OpenAIAssistant } from "./openai_api";
 
+function generateUniqueId() {
+	return "_" + Math.random().toString(36).substr(2, 9);
+}
+
+function format_prompt_table(prompt_table: { [key: string]: any }[]) {
+	/**
+	 * Format the list of prompt to a valid one.
+	 * All elements should have an id: if not generate one.
+	 * First element should be a user message: if not add "Hello" one,
+	 * Then an assistant message, then a user message, etc: if two consecutive messages are from the same role, they are merged.
+	 */
+
+	// Add first user message if not present.
+	if (prompt_table[0].role !== "user") {
+		prompt_table.unshift({
+			id: generateUniqueId(),
+			role: "user",
+			content: "Hello",
+		});
+	}
+
+	for (let i = 0; i < prompt_table.length; i++) {
+		const current = prompt_table[i];
+
+		// Merge consecutive messages from the same role
+		if (i > 0 && current.role === prompt_table[i - 1].role) {
+			if (
+				Array.isArray(prompt_table[i - 1].content) &&
+				!Array.isArray(current.content)
+			) {
+				prompt_table[i - 1].content.push({
+					type: "text",
+					text: current.content,
+				});
+			} else if (
+				Array.isArray(current.content) &&
+				!Array.isArray(prompt_table[i - 1].content)
+			) {
+				prompt_table[i - 1].content = [
+					{ type: "text", text: prompt_table[i - 1].content },
+					...current.content,
+				];
+			} else if (
+				Array.isArray(current.content) &&
+				Array.isArray(prompt_table[i - 1].content)
+			) {
+				prompt_table[i - 1].content = [
+					...prompt_table[i - 1].content,
+					...current.content,
+				];
+			} else {
+				prompt_table[i - 1].content += "\n\n" + current.content;
+			}
+			prompt_table.splice(i, 1);
+			i--; // Adjust the index since we've modified the array
+		}
+	}
+}
+
 export class PromptModal extends Modal {
 	param_dict: { [key: string]: string };
 	onSubmit: (input_dict: object) => void;
@@ -209,12 +268,16 @@ export class ChatModal extends Modal {
 				this.prompt_table.push({
 					role: "user",
 					content: this.prompt_text,
+					id: generateUniqueId(),
 				});
 			}
+
+			format_prompt_table(this.prompt_table);
 
 			this.prompt_table.push({
 				role: "assistant",
 				content: "Generating Answer...",
+				id: generateUniqueId(),
 			});
 
 			this.clearModalContent();
@@ -226,8 +289,13 @@ export class ChatModal extends Modal {
 			const view = this.app.workspace.getActiveViewOfType(
 				MarkdownView,
 			) as MarkdownView;
+			const parsed_prompts = this.prompt_table.map((item) =>
+				Object.fromEntries(
+					Object.entries(item).filter(([key]) => key !== "id"),
+				),
+			);
 			const answer = await this.aiAssistant.text_api_call(
-				this.prompt_table,
+				parsed_prompts,
 				answers[answers.length - 1],
 				view,
 			);
@@ -235,6 +303,7 @@ export class ChatModal extends Modal {
 				this.prompt_table.push({
 					role: "assistant",
 					content: answer,
+					id: generateUniqueId(),
 				});
 			}
 			this.clearModalContent();
@@ -252,10 +321,23 @@ export class ChatModal extends Modal {
 			MarkdownView,
 		) as MarkdownView;
 
-		for (const x of this.prompt_table) {
+		for (const [index, x] of this.prompt_table.entries()) {
 			const div = container.createEl("div", {
 				cls: `chat-div ${x["role"]}`,
 			});
+
+			// Add a delete button
+			div.style.position = "relative";
+			const deleteBtn = div.createEl("button", {
+				cls: "delete-btn",
+				text: "X",
+			});
+			deleteBtn.contentEditable = "false";
+			deleteBtn.style.position = "absolute";
+			deleteBtn.style.top = "0";
+			deleteBtn.style.right = "0";
+			deleteBtn.style.display = "none";
+
 			if (x["role"] === "assistant") {
 				await MarkdownRenderer.renderMarkdown(
 					x["content"],
@@ -294,9 +376,31 @@ export class ChatModal extends Modal {
 				}
 			}
 
+			div.dataset.entryId = x["id"];
+
 			div.addEventListener("click", async () => {
-				await navigator.clipboard.writeText(x["content"]);
-				new Notice(x["content"] + " Copied to clipboard!");
+				// div.contentEditable = "true";
+				// div.focus();
+				deleteBtn.style.display = "block";
+			});
+
+			// div.onblur = () => {
+			// 	const newText = div.innerText;
+			// 	if (this.prompt_table[index]["content"] !== newText) {
+			// 		this.prompt_table[index]["content"] = newText;
+			// 	}
+			// 	div.contentEditable = "false";
+			// 	deleteBtn.style.display = "none";
+			// };
+
+			deleteBtn.addEventListener("click", (event) => {
+				const entryId = div.dataset.entryId; // Assume you've stored the unique ID in the dataset when creating the div
+				div.remove();
+
+				this.prompt_table = this.prompt_table.filter(
+					(entry) => entry.id !== entryId,
+				);
+				console.log("Prompt table after deletion", this.prompt_table);
 			});
 		}
 
@@ -350,6 +454,7 @@ export class ChatModal extends Modal {
 				this.prompt_table.push({
 					role: "user",
 					content: [content],
+					id: generateUniqueId(),
 				});
 
 				this.clearModalContent();

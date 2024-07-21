@@ -35,7 +35,7 @@ export class OpenAIAssistant {
 		const streamMode = htmlEl !== undefined;
 		const has_img = prompt_list.some((el) => Array.isArray(el.content));
 		let model = this.modelName;
-		if (has_img && !["gpt-4o", "gpt-4-turbo"].includes(model)){
+		if (has_img && !["gpt-4o", "gpt-4-turbo"].includes(model)) {
 			model = "gpt-4o";
 		}
 		try {
