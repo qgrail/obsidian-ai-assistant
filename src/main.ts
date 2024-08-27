@@ -7,12 +7,13 @@ import {
 	Setting,
 } from "obsidian";
 import { ChatModal, ImageModal, PromptModal, SpeechModal } from "./modal";
-import { OpenAIAssistant, AnthropicAssistant } from "./openai_api";
+import { OpenAIAssistant, AnthropicAssistant, OllamaAssistant } from "./openai_api";
 
 interface AiAssistantSettings {
 	mySetting: string;
 	openAIapiKey: string;
 	anthropicApiKey: string;
+	ollamaApiAddress: string;
 	modelName: string;
 	imageModelName: string;
 	maxTokens: number;
@@ -25,7 +26,8 @@ const DEFAULT_SETTINGS: AiAssistantSettings = {
 	mySetting: "default",
 	openAIapiKey: "",
 	anthropicApiKey: "",
-	modelName: "gpt-4o",
+	ollamaApiAddress: "http://localhost:11434",
+	modelName: "gpt-4o-mini",
 	imageModelName: "dall-e-3",
 	maxTokens: 500,
 	replaceSelection: true,
@@ -35,13 +37,19 @@ const DEFAULT_SETTINGS: AiAssistantSettings = {
 
 export default class AiAssistantPlugin extends Plugin {
 	settings: AiAssistantSettings;
-	aiAssistant: OpenAIAssistant;
+	aiAssistant: OpenAIAssistant | AnthropicAssistant | OllamaAssistant;
 
 	build_api() {
 		if (this.settings.modelName.includes("claude")) {
 			this.aiAssistant = new AnthropicAssistant(
 				this.settings.openAIapiKey,
 				this.settings.anthropicApiKey,
+				this.settings.modelName,
+				this.settings.maxTokens,
+			);
+		} else if (this.settings.modelName.includes("llama3.1") || this.settings.modelName.includes("gemma2") || this.settings.modelName.includes("mistral-nemo")) {
+			this.aiAssistant = new OllamaAssistant(
+				this.settings.ollamaApiAddress,
 				this.settings.modelName,
 				this.settings.maxTokens,
 			);
@@ -191,6 +199,18 @@ class AiAssistantSettingTab extends PluginSettingTab {
 					this.plugin.build_api();
 				}),
 		);
+
+		new Setting(containerEl).setName("Ollama API Address").addText((text) =>
+			text
+				.setPlaceholder("Enter Ollama API address here")
+				.setValue(this.plugin.settings.ollamaApiAddress)
+				.onChange(async (value) => {
+					this.plugin.settings.ollamaApiAddress = value;
+					await this.plugin.saveSettings();
+					this.plugin.build_api();
+				}),
+		);
+
 		containerEl.createEl("h3", { text: "Text Assistant" });
 
 		new Setting(containerEl)
@@ -200,12 +220,16 @@ class AiAssistantSettingTab extends PluginSettingTab {
 				dropdown
 					.addOptions({
 						"gpt-4o": "gpt-4o",
+						"gpt-4o-mini": "gpt-4o-mini",
 						"gpt-4": "gpt-4",
 						"gpt-4-turbo": "gpt-4-turbo",
 						"gpt-3.5-turbo": "gpt-3.5-turbo",
 						"claude-3-opus-20240229": "Claude 3 Opus",
 						"claude-3-5-sonnet-20240620": "Claude 3.5 Sonnet",
 						"claude-3-haiku-20240307": "Claude 3 Haiku",
+						"llama3.1": "Llama 3.1",
+						"gemma2": "Gemma 2",
+						"mistral-nemo": "Mistral Nemo",
 					})
 					.setValue(this.plugin.settings.modelName)
 					.onChange(async (value) => {
