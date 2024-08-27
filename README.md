@@ -1,16 +1,18 @@
 # Obsidian AI Assistant
 
-Simple plugin to enable interactions with AI models such as [OpenAI ChatGPT](https://openai.com/blog/chatgpt), [Anthropic Claude](https://docs.anthropic.com/en/docs/models-overview), [OpenAI DALL·E](https://openai.com/product/dall-e-3), [OpenAI Whisper](https://openai.com/research/whisper) directly from your [Obsidian](https://obsidian.md/) notes.
+Simple plugin to enable interactions with AI models such as [OpenAI ChatGPT](https://openai.com/blog/chatgpt), [Anthropic Claude](https://docs.anthropic.com/en/docs/models-overview), [OpenAI DALL·E](https://openai.com/product/dall-e-3), [OpenAI Whisper](https://openai.com/research/whisper), and local LLMs via [Ollama](https://ollama.com/) directly from your [Obsidian](https://obsidian.md/) notes.
 
 The current available features of this plugin are:
 
--   🤖 Text assistant with OpenAI GPTs and Anthropic Claude models,
+-   🤖 Text assistant with OpenAI GPTs, Anthropic Claude models, and local LLMs via Ollama,
 -   🖼 Image generation with DALL·E3 and DALL·E2,
 -   🗣 Speech to text with Whisper.
 
 ## Latest Updates
 
 - Claude Sonnet 3.5 and GPT-4o are available.
+- New OpenAI model GPT-4o-mini is now available.
+- Added support for local LLMs using Ollama.
 
 ## How to use
 
@@ -28,14 +30,14 @@ You have two commands to interact with the text assistant:
 #### Chat mode
 
 Chat with the AI assistant from your Vault to generate content for your notes.
-From the chat, you can clic on any interaction to copy it directly to your clipboard.
+From the chat, you can click on any interaction to copy it directly to your clipboard.
 You can also copy the whole conversation.
 Chat mode now allows you to upload images to interact with GPT4-Vision or Claude models.
 
 #### Prompt mode
 
 Prompt mode allows you to use a selected piece of text from your note as input for the assistant.
-From here you can ask the assistant to translate, summarize, generate code ect.
+From here you can ask the assistant to translate, summarize, generate code etc.
 
 ### 🖼 Image Assistant
 
@@ -44,7 +46,7 @@ In the result window, select the images you want to keep.\
 They will automatically be downloaded to your vault and their path copied to your clipboard.\
 Then, you can paste the images anywhere in your notes.
 
-<img src="gifs/image_generator.gif" alt= “” width="55%">
+<img src="gifs/image_generator.gif" alt= "" width="55%">
 
 ### 🗣 Speech to Text
 
@@ -55,10 +57,11 @@ The transcript will be immediately added to your note at your cursor location.
 
 ### Text Assistant
 
--   **Model choice**: choice of the text model. Currently `gpt-3.5-turbo`, `gpt-4-turbo` and `gpt-4` are supported.
+-   **Model choice**: choice of the text model. Currently `gpt-3.5-turbo`, `gpt-4-turbo`, `gpt-4`, `gpt-4o-mini`, Claude models, and local LLMs via Ollama are supported.
 -   **Maximum number of tokens** in the generated answer
 -   **Replace or Add below**: In prompt mode, after having selected text from your note and enter your prompt,
-    you can decide to replace your text by the assistant answer or to paste it bellow.
+    you can decide to replace your text by the assistant answer or to paste it below.
+-   **Ollama API Address**: If using Ollama, specify the API address (default is http://localhost:11434) and the model (llama3.1, gemma2, mistral-nemo).
 
 ### Image Assistant
 
@@ -86,5 +89,6 @@ You can install the [AI Assistant](https://obsidian.md/plugins?id=ai-assistant) 
 
 ## Requirements
 
--   To use this plugin, with OpenAI models, you need an official API key from [here](https://platform.openai.com/account/api-keys),
--   To use this plugin, with Anthropic Claude models, you need an official API key from [here](https://console.anthropic.com/settings/keys).
+-   To use this plugin with OpenAI models, you need an official API key from [here](https://platform.openai.com/account/api-keys),
+-   To use this plugin with Anthropic Claude models, you need an official API key from [here](https://console.anthropic.com/settings/keys).
+-   To use local LLMs, you need to have [Ollama](https://ollama.com/) installed and running on your machine.

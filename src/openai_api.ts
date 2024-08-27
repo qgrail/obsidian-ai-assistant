@@ -178,3 +178,40 @@ export class AnthropicAssistant extends OpenAIAssistant {
 		}
 	};
 }
+
+export class OllamaAssistant extends OpenAIAssistant {
+	apiAddress: string;
+
+	constructor(apiAddress: string, modelName: string, maxTokens: number) {
+		super("", modelName, maxTokens);
+		this.apiAddress = apiAddress;
+	}
+
+	text_api_call = async (
+		prompt_list: { [key: string]: string }[],
+		htmlEl?: HTMLElement,
+		view?: MarkdownView,
+	) => {
+		try {
+			const response = await request({
+				url: `${this.apiAddress}/api/chat`,
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					model: this.modelName,
+					messages: prompt_list,
+					stream: false,
+					options: {
+						num_predict: this.maxTokens,
+					},
+				}),
+			});
+
+			return JSON.parse(response).message.content;
+		} catch (err) {
+			this.display_error(err);
+		}
+	};
+}
