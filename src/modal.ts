@@ -512,9 +512,9 @@ export class ImageModal extends Modal {
 
 	async onClose() {
 		if (this.selectedImageUrls.length > 0) {
-			if (!app.vault.getAbstractFileByPath(this.assetFolder)) {
+			if (!this.app.vault.getAbstractFileByPath(this.assetFolder)) {
 				try {
-					await app.vault.createFolder(this.assetFolder);
+					await this.app.vault.createFolder(this.assetFolder);
 				} catch (error) {
 					console.error("Error creating directory:", error);
 				}
