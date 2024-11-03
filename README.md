@@ -10,7 +10,7 @@ The current available features of this plugin are:
 
 ## Latest Updates
 
-- Claude Sonnet 3.5 and GPT-4o are available.
+- Claude Sonnet 3.5 latest, Opus latest and GPT-4o mini, o1-preview and o1-mini are now available.
 
 ## How to use
 

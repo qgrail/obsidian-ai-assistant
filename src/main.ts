@@ -199,12 +199,15 @@ class AiAssistantSettingTab extends PluginSettingTab {
 			.addDropdown((dropdown) =>
 				dropdown
 					.addOptions({
+						"gpt-4o-mini": "gpt-4o mini",
+						"o1-preview": "o1-preview",
+						"o1-mini": "o1-mini",
 						"gpt-4o": "gpt-4o",
 						"gpt-4": "gpt-4",
 						"gpt-4-turbo": "gpt-4-turbo",
 						"gpt-3.5-turbo": "gpt-3.5-turbo",
-						"claude-3-opus-20240229": "Claude 3 Opus",
-						"claude-3-5-sonnet-20240620": "Claude 3.5 Sonnet",
+						"claude-3-opus-latest": "Claude 3 Opus",
+						"claude-3-5-sonnet-latest": "Claude 3.5 Sonnet",
 						"claude-3-haiku-20240307": "Claude 3 Haiku",
 					})
 					.setValue(this.plugin.settings.modelName)
