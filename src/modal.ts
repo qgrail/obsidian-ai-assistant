@@ -11,10 +11,12 @@ import { AnthropicAssistant, OpenAIAssistant } from "./openai_api";
 
 export class ChoiceModal extends Modal {
 	onSubmit: (choice: string) => void;
+	preSelected: string;
 
-	constructor(app: App, onSubmit: (choice: string) => void) {
+	constructor(app: App, onSubmit: (choice: string) => void, preSelected: string) {
 		super(app);
 		this.onSubmit = onSubmit;
+		this.preSelected = preSelected;
 	}
 
 	build_choice_modal(choices: string[]) {
@@ -28,6 +30,9 @@ export class ChoiceModal extends Modal {
 		choices.forEach(choice => {
 			const option = dropdown.createEl("option", { text: choice });
 			option.value = choice;
+			if (choice === this.preSelected) {
+				option.selected = true;
+			}
 		});
 
 		const submitButton = choiceContainer.createEl("button", { text: "Submit", cls: "mod-cta", });
@@ -701,4 +706,61 @@ export class SpeechModal extends Modal {
 		}
 		this.contentEl.empty();
 	}
+}
+
+export class CommandModal extends Modal {
+    onSubmit: (result: { [key: string]: string }) => void;
+    defaultUserCommand: string;
+    param_dict: { [key: string]: string };
+
+    constructor(app: App, onSubmit: (result: { [key: string]: string }) => void, defaultUserCommand: string) {
+        super(app);
+        this.onSubmit = onSubmit;
+        this.defaultUserCommand = defaultUserCommand;
+        this.param_dict = {};
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        this.titleEl.setText("What can I do for you?");
+
+        const input_container = contentEl.createEl("div", {
+            cls: "chat-button-container-right",
+        });
+
+        const input_field = input_container.createEl("input", {
+            placeholder: "Your command here",
+            type: "text",
+        });
+        input_field.value = this.defaultUserCommand; // Pre-fill the input field
+
+        input_field.addEventListener("keypress", (evt) => {
+            if (evt.key === "Enter") {
+                this.param_dict["userCommand"] = input_field.value.trim();
+                this.submit_action();
+            }
+        });
+
+        const submit_btn = input_container.createEl("button", {
+            text: "Submit",
+            cls: "mod-cta",
+        });
+        submit_btn.addEventListener("click", () => {
+            this.param_dict["userCommand"] = input_field.value.trim();
+            this.submit_action();
+        });
+
+        input_field.focus();
+        input_field.select();
+    }
+
+    submit_action() {
+        this.onSubmit(this.param_dict);
+        this.close();
+    }
+
+    onClose() {
+        const { contentEl } = this;
+        contentEl.empty();
+    }
 }

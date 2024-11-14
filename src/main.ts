@@ -7,8 +7,10 @@ import {
 	Setting,
 	Vault,
 } from "obsidian";
-import { ChatModal, ChoiceModal, ImageModal, PromptModal, SpeechModal } from "./modal";
+import { ChatModal, ChoiceModal, ImageModal, PromptModal, SpeechModal, CommandModal } from "./modal";
 import { OpenAIAssistant, AnthropicAssistant } from "./openai_api";
+import { requestUrl } from "obsidian";
+import TurndownService from 'turndown';
 
 interface AiAssistantSettings {
 	mySetting: string;
@@ -37,6 +39,97 @@ const DEFAULT_SETTINGS: AiAssistantSettings = {
 	imgFolder: "AiAssistant/Assets",
 	language: "",
 };
+
+async function processPrompts(app: App, editor: Editor, settings: any, userCommand: string): Promise<{ systemPromptText: string, userPrompt: string, temperature: number, defaultUserCommand: string }> {
+    const fileName = settings.fileNameWithSystemPromptForAI; // replace with your specific file name
+    const files = app.vault.getFiles();
+    
+    // Find the file with the specified name
+    const file = files.find(f => f.name === fileName);
+    
+    if (!file) {
+       console.error(`File '${fileName}' not found.`);
+       return { systemPromptText: '', userPrompt: '', temperature: settings.temperature, defaultUserCommand: '' };
+    }
+    
+    // Read the content of the specific file
+    let systemPromptText = await app.vault.read(file);
+
+    // Get the complete text of the current note
+    const completeText = editor.getValue().trim();
+
+    // Replace the placeholder with the complete text of the note
+    systemPromptText = systemPromptText.replace("{NODE TEXT}", completeText);
+
+    const selected_text = editor.getSelection().toString().trim();
+    let userPrompt = "improve: \n" + selected_text;
+
+    let defaultUserCommand = '';
+
+    // Check for DefaultUserCommand in systemPromptText
+    const defaultUserCommandMatch = systemPromptText.match(/\{DefaultUserCommand:\s*"([^"]+)"\}/);
+    if (defaultUserCommandMatch) {
+        defaultUserCommand = defaultUserCommandMatch[1];
+        userPrompt = `${defaultUserCommand}: \n${selected_text}`;
+        // Remove the DefaultUserCommand from systemPromptText
+        systemPromptText = systemPromptText.replace(defaultUserCommandMatch[0], '');
+    }
+
+    // If userCommand is provided, replace the default command
+    if (userCommand) {
+        userPrompt = `${userCommand}: \n${selected_text}`;
+    }
+
+    // Check if {LoadContent} command is present
+    if (systemPromptText.includes("{LoadContent}") || userPrompt.includes("{LoadContent}")) {
+        console.debug('Load Content ...');
+        // Extract URLs from the complete text
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const urls = completeText.match(urlRegex) || [];
+        console.debug('Found URLs:', urls);
+        // Fetch content of the URLs
+        const urlContents = await Promise.all(urls.map(async (url) => {
+            try {
+                const response = await requestUrl({ url });
+                return response.text;
+            } catch (error) {
+                console.error(`Failed to fetch content from ${url}:`, error);
+                return "";
+            }
+        }));
+
+        // Simplify HTML content to only include headers and paragraphs
+        const parser = new DOMParser();
+        const simplifiedHtmlContents = urlContents.map(content => {
+            const doc = parser.parseFromString(content, 'text/html');
+            const elements = doc.body.querySelectorAll('h1, h2, h3, h4, h5, h6, p');
+            return Array.from(elements).map(el => el.outerHTML).join('');
+        });
+
+        // Initialize TurndownService
+        const turndownService = new TurndownService();
+
+        // Convert simplified HTML content to Markdown
+        const markdownContents = simplifiedHtmlContents.map(content => turndownService.turndown(content));
+
+        // Combine fetched content
+        const combinedContent = markdownContents.join("\n");
+
+        // Replace {LoadContent} with the combined content
+        systemPromptText = systemPromptText.replace("{LoadContent}", combinedContent);
+        userPrompt = userPrompt.replace("{LoadContent}", combinedContent);
+    }
+
+    // Check for Temperature command in systemPromptText
+    const temperatureMatch = systemPromptText.match(/\{Temperature:\s*([0-9.]+)\}/);
+    const temperature = temperatureMatch ? parseFloat(temperatureMatch[1]) : settings.temperature;
+    if (temperatureMatch) {
+        // Remove the Temperature command from systemPromptText
+        systemPromptText = systemPromptText.replace(temperatureMatch[0], '');
+    }
+
+    return { systemPromptText, userPrompt, temperature, defaultUserCommand };
+}
 
 export default class AiAssistantPlugin extends Plugin {
 	settings: AiAssistantSettings;
@@ -74,35 +167,11 @@ export default class AiAssistantPlugin extends Plugin {
 		this.addCommand({
 			id: "rewrite",
 			name: "Open Assistant Rewrite",
-			editorCallback: async (editor: Editor) => {
-				const fileName = this.settings.fileNameWithSystemPromptForAI; // replace with your specific file name
-				const files = this.app.vault.getFiles();
-				
-				// Find the file with the specified name
-				const file = files.find(f => f.name === fileName);
-				
-				if (!file) {
-				   console.error(`File '${fileName}' not found.`);
-				   return;
-				}
-				
-				// Read the content of the specific file
-				let systemPromptText = await this.app.vault.read(file);
-
-				// Get the complete text of the current note
-				const completeText = editor.getValue().trim();
-
-				// Replace the placeholder with the complete text of the note
-				systemPromptText = systemPromptText.replace("{NODE TEXT}", completeText);
-
-
-				//console.debug (systemPromptText);
-
-				const selected_text = editor.getSelection().toString().trim();
-
-				const userPrompt = "improve: \n" + selected_text;
-
-				//console.debug (userPrompt);
+            editorCallback: async (editor: Editor) => {
+				const { systemPromptText, userPrompt, temperature } = await processPrompts(this.app, editor, this.settings,"" );
+				console.log("systemPromptText", systemPromptText);
+                console.log("userPrompt", userPrompt);
+				console.log("temperature", temperature);
 
 				let answer = await this.aiAssistant.text_api_call([
 					{
@@ -113,11 +182,11 @@ export default class AiAssistantPlugin extends Plugin {
 						role: "user",
 						content: userPrompt,
 					},
-				],undefined,undefined, this.settings.temperature);
+				],undefined,undefined, temperature);
 				answer = answer!;
-				if (!this.settings.replaceSelection) {
-					answer = selected_text + "\n" + answer.trim();
-				}
+				//if (!this.settings.replaceSelection) {
+				//	answer = selected_text + "\n" + answer.trim();
+				//}
 				if (answer) {
 					editor.replaceSelection(answer.trim());
 				}
@@ -134,6 +203,9 @@ export default class AiAssistantPlugin extends Plugin {
 				const assistantFiles = files.filter(file => file.path.startsWith(folderName + "/"));
 				const assistantNames = assistantFiles.map(file => file.name);
 		
+				 // Get the currently configured AI Assistant
+				const preSelectedAssistant = this.settings.fileNameWithSystemPromptForAI;
+				
 				// Function to handle the user's choice
 				const onSubmit = (selectedAssistantFile: string) => {
 					// Store the selected assistant file name in the settings
@@ -141,8 +213,8 @@ export default class AiAssistantPlugin extends Plugin {
 					new Notice(`AI Assistant set to: ${selectedAssistantFile}`);
 				};
 		
-				// Open the choice modal
-				const choiceModal = new ChoiceModal(this.app, onSubmit);
+				// Open the choice modal with the pre-selected assistant
+				const choiceModal = new ChoiceModal(this.app, onSubmit, preSelectedAssistant);
 				choiceModal.build_choice_modal(assistantNames);
 				choiceModal.open();
 			},
@@ -150,43 +222,23 @@ export default class AiAssistantPlugin extends Plugin {
 
 		this.addCommand({
 			id: "prompt-mode",
-			name: "Open Assistant Promt",
+			name: "Open Assistant Prompt",
 			editorCallback: async (editor: Editor) => {
+				const { systemPromptText, userPrompt, temperature, defaultUserCommand } = await processPrompts(this.app, editor, this.settings, "");
+				console.log("systemPromptText", systemPromptText);
+				console.log("userPrompt", userPrompt);
+				console.log("temperature", temperature);
 
-				const fileName = this.settings.fileNameWithSystemPromptForAI;
-				const files = this.app.vault.getFiles();
-				
-				// Find the file with the specified name
-				const file = files.find(f => f.name === fileName);
-				
-				if (!file) {
-				   console.error(`File '${fileName}' not found.`);
-				   return;
-				}
-				
-				// Read the content of the specific file
-				let systemPromptText = await this.app.vault.read(file);
-
-				// Get the complete text of the current note
-				const completeText = editor.getValue().trim();
-
-				// Replace the placeholder with the complete text of the note
-				systemPromptText = systemPromptText.replace("{NODE TEXT}", completeText);
-
-
-				//console.debug (systemPromptText);
-
-				const selected_text = editor.getSelection().toString().trim();
-
-
-				new PromptModal(
+				new CommandModal(
 					this.app,
 					async (x: { [key: string]: string }) => {
-						const userPrompt = x["prompt_text"] + ": \n" + selected_text;
+						const userCommand = x["userCommand"];
+						const { systemPromptText, userPrompt, temperature } = await processPrompts(this.app, editor, this.settings, userCommand);
+						console.log("systemPromptText", systemPromptText);
+						console.log("userPrompt", userPrompt);
+						console.log("temperature", temperature);
 
-						//console.debug (userPrompt);
-
-						let answer = await this.aiAssistant.text_api_call([					
+						let answer = await this.aiAssistant.text_api_call([
 							{
 								role: "system",
 								content: systemPromptText,
@@ -195,17 +247,16 @@ export default class AiAssistantPlugin extends Plugin {
 								role: "user",
 								content: userPrompt,
 							},
-						],undefined,undefined, this.settings.temperature);
+						], undefined, undefined, temperature);
 						answer = answer!;
 						if (!this.settings.replaceSelection) {
-							answer = selected_text + "\n" + answer.trim();
+							answer = editor.getSelection().toString().trim() + "\n" + answer.trim();
 						}
 						if (answer) {
 							editor.replaceSelection(answer.trim());
 						}
 					},
-					false,
-					{},
+					defaultUserCommand,
 				).open();
 			},
 		});
