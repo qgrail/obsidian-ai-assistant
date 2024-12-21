@@ -1,9 +1,9 @@
 {
-	"id": "ai-assistant",
-	"name": "AI Assistant",
+	"id": "GAME3 ai-assistant",
+	"name": "GAME3 AI Assistant",
 	"version": "1.5.0",
 	"minAppVersion": "0.15.0",
-	"description": "AI Assistant plugin for Obsidian",
-	"author": "Quentin Grail",
+	"description": "GAME3 AI Assistant. Based on the AI Assistant plugin for Obsidian.",
+	"author": "Quentin Grail, Peter Beck",
 	"isDesktopOnly": false
 }

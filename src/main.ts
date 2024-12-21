@@ -19,6 +19,7 @@ interface AiAssistantSettings {
 	modelName: string;
 	imageModelName: string;
 	fileNameWithSystemPromptForAI: string;
+	folderForAIAssistants: string;
 	temperature: number;
 	maxTokens: number;
 	replaceSelection: boolean;
@@ -30,7 +31,7 @@ const DEFAULT_SETTINGS: AiAssistantSettings = {
 	mySetting: "default",
 	openAIapiKey: "",
 	anthropicApiKey: "",
-	modelName: "gpt-3.5-turbo",
+	modelName: "gpt-4o",
 	imageModelName: "dall-e-3",
 	fileNameWithSystemPromptForAI: "System Prompt for AI.md",
 	maxTokens: 500,
@@ -38,6 +39,7 @@ const DEFAULT_SETTINGS: AiAssistantSettings = {
 	replaceSelection: true,
 	imgFolder: "AiAssistant/Assets",
 	language: "",
+	folderForAIAssistants: "_MORE/AI Assistants",
 };
 
 async function processPrompts(app: App, editor: Editor, settings: any, userCommand: string): Promise<{ systemPromptText: string, userPrompt: string, temperature: number, defaultUserCommand: string }> {
@@ -57,14 +59,22 @@ async function processPrompts(app: App, editor: Editor, settings: any, userComma
 
     // Get the complete text of the current note
     const completeText = editor.getValue().trim();
-
+	
     // Replace the placeholder with the complete text of the note
     systemPromptText = systemPromptText.replace("{NODE TEXT}", completeText);
 
     const selected_text = editor.getSelection().toString().trim();
-    let userPrompt = "improve: \n" + selected_text;
+    let userPrompt = selected_text;
 
     let defaultUserCommand = '';
+
+	// Get the name of the current note
+	const noteName = app.workspace.getActiveFile()?.name.replace(/\.md$/, '') || '';
+
+	// Replace {NodeName} with the name of the current note
+	systemPromptText = systemPromptText.replace("{Node Name}", noteName);
+	//console.log("systemPromptText before DefaultUserCommand", systemPromptText);
+
 
     // Check for DefaultUserCommand in systemPromptText
     const defaultUserCommandMatch = systemPromptText.match(/\{DefaultUserCommand:\s*"([^"]+)"\}/);
@@ -73,12 +83,16 @@ async function processPrompts(app: App, editor: Editor, settings: any, userComma
         userPrompt = `${defaultUserCommand}: \n${selected_text}`;
         // Remove the DefaultUserCommand from systemPromptText
         systemPromptText = systemPromptText.replace(defaultUserCommandMatch[0], '');
+		console.log("systemPromptText after DefaultUserCommand: ", systemPromptText);
     }
 
     // If userCommand is provided, replace the default command
     if (userCommand) {
         userPrompt = `${userCommand}: \n${selected_text}`;
     }
+
+	// Make shure staht is removed from {NodeName} from systemPromptText
+	systemPromptText = systemPromptText.replace("{NodeName}", "");
 
     // Check if {LoadContent} command is present
     if (systemPromptText.includes("{LoadContent}") || userPrompt.includes("{LoadContent}")) {
@@ -105,6 +119,8 @@ async function processPrompts(app: App, editor: Editor, settings: any, userComma
             const elements = doc.body.querySelectorAll('h1, h2, h3, h4, h5, h6, p');
             return Array.from(elements).map(el => el.outerHTML).join('');
         });
+
+
 
         // Initialize TurndownService
         const turndownService = new TurndownService();
@@ -196,7 +212,7 @@ export default class AiAssistantPlugin extends Plugin {
 			id: "choose-ai-assistant",
 			name: "Choose AI Assistant",
 			editorCallback: async (editor: Editor) => {
-				const folderName = "AI Assistants";
+				const folderName = this.settings.folderForAIAssistants;
 				const files = this.app.vault.getFiles();
 				
 				// Filter files in the specified folder
@@ -225,9 +241,6 @@ export default class AiAssistantPlugin extends Plugin {
 			name: "Open Assistant Prompt",
 			editorCallback: async (editor: Editor) => {
 				const { systemPromptText, userPrompt, temperature, defaultUserCommand } = await processPrompts(this.app, editor, this.settings, "");
-				console.log("systemPromptText", systemPromptText);
-				console.log("userPrompt", userPrompt);
-				console.log("temperature", temperature);
 
 				new CommandModal(
 					this.app,
@@ -365,6 +378,8 @@ class AiAssistantSettingTab extends PluginSettingTab {
 			.addDropdown((dropdown) =>
 				dropdown
 					.addOptions({
+						"gpt-4o": "gpt-4o",
+						"gpt-4o-mini": "gpt-4o-mini",	
 						"gpt-4": "gpt-4",
 						"gpt-4-turbo-preview": "gpt-4-turbo",
 						"gpt-3.5-turbo": "gpt-3.5-turbo",
