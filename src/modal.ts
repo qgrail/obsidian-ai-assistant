@@ -9,6 +9,68 @@ import {
 } from "obsidian";
 import { AnthropicAssistant, OpenAIAssistant } from "./openai_api";
 
+function generateUniqueId() {
+	return "_" + Math.random().toString(36).substr(2, 9);
+}
+
+const COPY_BUTTON = "📋";
+const DELETE_BUTTON = "🗑";
+
+function format_prompt_table(prompt_table: { [key: string]: any }[]) {
+	/**
+	 * Format the list of prompt to a valid one.
+	 * All elements should have an id: if not generate one.
+	 * First element should be a user message: if not add "Hello" one,
+	 * Then an assistant message, then a user message, etc: if two consecutive messages are from the same role, they are merged.
+	 */
+
+	// Add first user message if not present.
+	if (prompt_table[0].role !== "user") {
+		prompt_table.unshift({
+			id: generateUniqueId(),
+			role: "user",
+			content: "Hello",
+		});
+	}
+
+	for (let i = 0; i < prompt_table.length; i++) {
+		const current = prompt_table[i];
+
+		// Merge consecutive messages from the same role
+		if (i > 0 && current.role === prompt_table[i - 1].role) {
+			if (
+				Array.isArray(prompt_table[i - 1].content) &&
+				!Array.isArray(current.content)
+			) {
+				prompt_table[i - 1].content.push({
+					type: "text",
+					text: current.content,
+				});
+			} else if (
+				Array.isArray(current.content) &&
+				!Array.isArray(prompt_table[i - 1].content)
+			) {
+				prompt_table[i - 1].content = [
+					{ type: "text", text: prompt_table[i - 1].content },
+					...current.content,
+				];
+			} else if (
+				Array.isArray(current.content) &&
+				Array.isArray(prompt_table[i - 1].content)
+			) {
+				prompt_table[i - 1].content = [
+					...prompt_table[i - 1].content,
+					...current.content,
+				];
+			} else {
+				prompt_table[i - 1].content += "\n" + current.content;
+			}
+			prompt_table.splice(i, 1);
+			i--; // Adjust the index since we've modified the array
+		}
+	}
+}
+
 export class PromptModal extends Modal {
 	param_dict: { [key: string]: string };
 	onSubmit: (input_dict: object) => void;
@@ -141,7 +203,7 @@ export class PromptModal extends Modal {
 		});
 
 		const submit_btn = input_container.createEl("button", {
-			text: "Submit",
+			text: "Send",
 			cls: "mod-cta",
 		});
 		submit_btn.addEventListener("click", () => {
@@ -188,15 +250,30 @@ export class ChatModal extends Modal {
 	};
 
 	send_action = async () => {
-		if (this.prompt_text && !this.is_generating_answer) {
+		const hasTableWithNonArrayContent =
+			this.prompt_table.length > 0 &&
+			!Array.isArray(this.prompt_table.at(-1)?.content) &&
+			this.prompt_table.at(-1)?.role === "user";
+
+		if (
+			(this.prompt_text || hasTableWithNonArrayContent) &&
+			!this.is_generating_answer
+		) {
 			this.is_generating_answer = true;
+
+			if (!this.prompt_text) {
+				this.prompt_text = this.prompt_table.at(-1)?.content;
+				this.prompt_table.pop();
+			}
 
 			// For Anthropic, we need to merge text and image in the same content.
 			let merge_text_img = false;
 			if (this.prompt_table.length > 0) {
-				const lastElement =
-					this.prompt_table[this.prompt_table.length - 1];
-				if (this.is_anthropic_img(lastElement)) {
+				const lastElement = this.prompt_table.at(-1);
+				if (
+					lastElement !== undefined &&
+					this.is_anthropic_img(lastElement)
+				) {
 					lastElement["content"].push({
 						type: "text",
 						text: this.prompt_text,
@@ -209,12 +286,16 @@ export class ChatModal extends Modal {
 				this.prompt_table.push({
 					role: "user",
 					content: this.prompt_text,
+					id: generateUniqueId(),
 				});
 			}
+
+			format_prompt_table(this.prompt_table);
 
 			this.prompt_table.push({
 				role: "assistant",
 				content: "Generating Answer...",
+				id: generateUniqueId(),
 			});
 
 			this.clearModalContent();
@@ -226,8 +307,13 @@ export class ChatModal extends Modal {
 			const view = this.app.workspace.getActiveViewOfType(
 				MarkdownView,
 			) as MarkdownView;
+			const parsed_prompts = this.prompt_table.map((item) =>
+				Object.fromEntries(
+					Object.entries(item).filter(([key]) => key !== "id"),
+				),
+			);
 			const answer = await this.aiAssistant.text_api_call(
-				this.prompt_table,
+				parsed_prompts,
 				answers[answers.length - 1],
 				view,
 			);
@@ -235,6 +321,7 @@ export class ChatModal extends Modal {
 				this.prompt_table.push({
 					role: "assistant",
 					content: answer,
+					id: generateUniqueId(),
 				});
 			}
 			this.clearModalContent();
@@ -252,10 +339,34 @@ export class ChatModal extends Modal {
 			MarkdownView,
 		) as MarkdownView;
 
-		for (const x of this.prompt_table) {
+		for (const [index, x] of this.prompt_table.entries()) {
 			const div = container.createEl("div", {
 				cls: `chat-div ${x["role"]}`,
+				attr: {
+					style: "position: relative",
+				},
 			});
+
+			const deleteBtn = div.createEl("button", {
+				cls: "delete-btn",
+				text: DELETE_BUTTON,
+				attr: {
+					"aria-label": "Delete message",
+					title: "Delete message",
+					contentEditable: "false",
+				},
+			});
+
+			const copyBtn = div.createEl("button", {
+				cls: "copy-btn",
+				text: COPY_BUTTON,
+				attr: {
+					"aria-label": "Copy to clipboard",
+					title: "Copy to clipboard",
+					contentEditable: "false",
+				},
+			});
+
 			if (x["role"] === "assistant") {
 				await MarkdownRenderer.renderMarkdown(
 					x["content"],
@@ -294,9 +405,66 @@ export class ChatModal extends Modal {
 				}
 			}
 
+			div.dataset.entryId = x["id"];
+
+			// Only allow editing user messages that are not arrays.
+			if (x["role"] === "user" && !Array.isArray(x["content"])) {
+				div.addEventListener("click", async () => {
+					div.contentEditable = "true";
+				});
+
+				div.addEventListener("input", () => {
+					this.prompt_table[index].content = div.innerText;
+					console.log(
+						"Updated prompt table",
+						this.prompt_table[index],
+					);
+				});
+			}
+
+			// All divs are clickable to show the delete/copy buttons
 			div.addEventListener("click", async () => {
-				await navigator.clipboard.writeText(x["content"]);
-				new Notice(x["content"] + " Copied to clipboard!");
+				deleteBtn.style.display = "block";
+				copyBtn.style.display = "block";
+			});
+
+			div.addEventListener("mouseover", () => {
+				deleteBtn.style.display = "block";
+				copyBtn.style.display = "block";
+			});
+
+			// You might also want to hide the buttons when the mouse leaves
+			div.addEventListener("mouseout", () => {
+				if (div.contentEditable !== "true") {
+					deleteBtn.style.display = "none";
+					copyBtn.style.display = "none";
+				}
+			});
+
+			div.addEventListener("blur", () => {
+				div.contentEditable = "false";
+				deleteBtn.style.display = "none";
+				copyBtn.style.display = "none";
+			});
+
+			deleteBtn.addEventListener("click", (event) => {
+				const entryId = div.dataset.entryId; // Assume you've stored the unique ID in the dataset when creating the div
+				div.remove();
+
+				this.prompt_table = this.prompt_table.filter(
+					(entry) => entry.id !== entryId,
+				);
+			});
+
+			copyBtn.addEventListener("click", async (event) => {
+				let text = div.innerText;
+
+				// Remove each button's text from the copied content
+				[COPY_BUTTON, DELETE_BUTTON].forEach((button) => {
+					text = text.replace(button, "");
+				});
+				await navigator.clipboard.writeText(text.trim());
+				new Notice("Message copied to clipboard");
 			});
 		}
 
@@ -350,6 +518,7 @@ export class ChatModal extends Modal {
 				this.prompt_table.push({
 					role: "user",
 					content: [content],
+					id: generateUniqueId(),
 				});
 
 				this.clearModalContent();
@@ -378,7 +547,7 @@ export class ChatModal extends Modal {
 		});
 
 		const submit_btn = right_button_container.createEl("button", {
-			text: "Submit",
+			text: "Send",
 			cls: "mod-cta",
 		});
 		submit_btn.addEventListener("click", () => {
@@ -406,10 +575,15 @@ export class ChatModal extends Modal {
 			this.displayModalContent();
 		});
 		copy_button.addEventListener("click", async () => {
-			const conversation = this.prompt_table
+			let conversation = this.prompt_table
 				.map((x) => x["content"])
 				.join("\n\n");
-			await navigator.clipboard.writeText(conversation);
+
+			[COPY_BUTTON, DELETE_BUTTON].forEach((button) => {
+				conversation = conversation.replace(button, "");
+			});
+
+			await navigator.clipboard.writeText(conversation.trim());
 			new Notice("Conversation copied to clipboard");
 		});
 

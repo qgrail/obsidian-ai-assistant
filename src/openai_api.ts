@@ -1,7 +1,8 @@
-import { MarkdownRenderer, MarkdownView, Notice } from "obsidian";
+import { MarkdownView, Notice, request } from "obsidian";
 
 import { OpenAI } from "openai";
-import { request } from "obsidian";
+
+import { DEFAULT_OAI_IMAGE_MODEL, OAI_IMAGE_CAPABLE_MODELS } from "./settings";
 
 export class OpenAIAssistant {
 	modelName: string;
@@ -35,25 +36,22 @@ export class OpenAIAssistant {
 		const streamMode = htmlEl !== undefined;
 		const has_img = prompt_list.some((el) => Array.isArray(el.content));
 		let model = this.modelName;
-		if (
-			has_img &&
-			![
-				"gpt-4o",
-				"gpt-4-turbo",
-				"o1-mini",
-				"o1-preview",
-				"gpt-4o-mini",
-			].includes(model)
-		) {
-			model = "gpt-4o";
+
+		if (has_img && !OAI_IMAGE_CAPABLE_MODELS.includes(model)) {
+			model = DEFAULT_OAI_IMAGE_MODEL;
 		}
 		try {
-			const response = await this.apiFun.chat.completions.create({
+			const is_reasonning_model = model.includes("o1");
+			const params = {
 				messages: prompt_list,
 				model: model,
-				max_tokens: this.maxTokens,
 				stream: streamMode,
-			});
+				...(is_reasonning_model
+					? { max_completion_tokens: this.maxTokens }
+					: { max_tokens: this.maxTokens }),
+			};
+
+			const response = await this.apiFun.chat.completions.create(params);
 
 			if (streamMode) {
 				let responseText = "";
@@ -61,17 +59,7 @@ export class OpenAIAssistant {
 					const content = chunk.choices[0].delta.content;
 					if (content) {
 						responseText = responseText.concat(content);
-						htmlEl.innerHTML = "";
-						if (view) {
-							await MarkdownRenderer.renderMarkdown(
-								responseText,
-								htmlEl,
-								"",
-								view,
-							);
-						} else {
-							htmlEl.innerHTML += responseText;
-						}
+						htmlEl.innerHTML = responseText;
 					}
 				}
 				return htmlEl.innerHTML;
