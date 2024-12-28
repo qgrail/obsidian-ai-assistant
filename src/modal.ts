@@ -63,7 +63,7 @@ function format_prompt_table(prompt_table: { [key: string]: any }[]) {
 					...current.content,
 				];
 			} else {
-				prompt_table[i - 1].content += "\n\n" + current.content;
+				prompt_table[i - 1].content += "\n" + current.content;
 			}
 			prompt_table.splice(i, 1);
 			i--; // Adjust the index since we've modified the array
@@ -203,7 +203,7 @@ export class PromptModal extends Modal {
 		});
 
 		const submit_btn = input_container.createEl("button", {
-			text: "Submit",
+			text: "Send",
 			cls: "mod-cta",
 		});
 		submit_btn.addEventListener("click", () => {
@@ -250,15 +250,30 @@ export class ChatModal extends Modal {
 	};
 
 	send_action = async () => {
-		if (this.prompt_text && !this.is_generating_answer) {
+		const hasTableWithNonArrayContent =
+			this.prompt_table.length > 0 &&
+			!Array.isArray(this.prompt_table.at(-1)?.content) &&
+			this.prompt_table.at(-1)?.role === "user";
+
+		if (
+			(this.prompt_text || hasTableWithNonArrayContent) &&
+			!this.is_generating_answer
+		) {
 			this.is_generating_answer = true;
+
+			if (!this.prompt_text) {
+				this.prompt_text = this.prompt_table.at(-1)?.content;
+				this.prompt_table.pop();
+			}
 
 			// For Anthropic, we need to merge text and image in the same content.
 			let merge_text_img = false;
 			if (this.prompt_table.length > 0) {
-				const lastElement =
-					this.prompt_table[this.prompt_table.length - 1];
-				if (this.is_anthropic_img(lastElement)) {
+				const lastElement = this.prompt_table.at(-1);
+				if (
+					lastElement !== undefined &&
+					this.is_anthropic_img(lastElement)
+				) {
 					lastElement["content"].push({
 						type: "text",
 						text: this.prompt_text,
@@ -439,7 +454,6 @@ export class ChatModal extends Modal {
 				this.prompt_table = this.prompt_table.filter(
 					(entry) => entry.id !== entryId,
 				);
-				console.log("Prompt table after deletion", this.prompt_table);
 			});
 
 			copyBtn.addEventListener("click", async (event) => {
@@ -533,7 +547,7 @@ export class ChatModal extends Modal {
 		});
 
 		const submit_btn = right_button_container.createEl("button", {
-			text: "Submit",
+			text: "Send",
 			cls: "mod-cta",
 		});
 		submit_btn.addEventListener("click", () => {

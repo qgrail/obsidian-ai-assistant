@@ -7,7 +7,14 @@ import {
 	Setting,
 } from "obsidian";
 import { ChatModal, ImageModal, PromptModal, SpeechModal } from "./modal";
-import { OpenAIAssistant, AnthropicAssistant } from "./openai_api";
+import { AnthropicAssistant, OpenAIAssistant } from "./openai_api";
+import {
+	ALL_IMAGE_MODELS,
+	ALL_MODELS,
+	DEFAULT_IMAGE_MODEL,
+	DEFAULT_OAI_IMAGE_MODEL,
+	DEFAULT_MAX_TOKENS,
+} from "./settings";
 
 interface AiAssistantSettings {
 	mySetting: string;
@@ -25,9 +32,9 @@ const DEFAULT_SETTINGS: AiAssistantSettings = {
 	mySetting: "default",
 	openAIapiKey: "",
 	anthropicApiKey: "",
-	modelName: "gpt-4o",
-	imageModelName: "dall-e-3",
-	maxTokens: 500,
+	modelName: DEFAULT_OAI_IMAGE_MODEL,
+	imageModelName: DEFAULT_IMAGE_MODEL,
+	maxTokens: DEFAULT_MAX_TOKENS,
 	replaceSelection: true,
 	imgFolder: "AiAssistant/Assets",
 	language: "",
@@ -198,18 +205,7 @@ class AiAssistantSettingTab extends PluginSettingTab {
 			.setDesc("Select your model")
 			.addDropdown((dropdown) =>
 				dropdown
-					.addOptions({
-						"gpt-4o-mini": "gpt-4o mini",
-						"o1-preview": "o1-preview",
-						"o1-mini": "o1-mini",
-						"gpt-4o": "gpt-4o",
-						"gpt-4": "gpt-4",
-						"gpt-4-turbo": "gpt-4-turbo",
-						"gpt-3.5-turbo": "gpt-3.5-turbo",
-						"claude-3-opus-latest": "Claude 3 Opus",
-						"claude-3-5-sonnet-latest": "Claude 3.5 Sonnet",
-						"claude-3-haiku-20240307": "Claude 3 Haiku",
-					})
+					.addOptions(ALL_MODELS)
 					.setValue(this.plugin.settings.modelName)
 					.onChange(async (value) => {
 						this.plugin.settings.modelName = value;
@@ -272,10 +268,7 @@ class AiAssistantSettingTab extends PluginSettingTab {
 			.setDesc("Select your model")
 			.addDropdown((dropdown) =>
 				dropdown
-					.addOptions({
-						"dall-e-3": "dall-e-3",
-						"dall-e-2": "dall-e-2",
-					})
+					.addOptions(ALL_IMAGE_MODELS)
 					.setValue(this.plugin.settings.imageModelName)
 					.onChange(async (value) => {
 						this.plugin.settings.imageModelName = value;
@@ -296,5 +289,15 @@ class AiAssistantSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					}),
 			);
+
+		const div = containerEl.createDiv({ cls: "coffee-container" });
+		div.createEl("a", {
+			href: "https://buymeacoffee.com/qgrail",
+		}).createEl("img", {
+			attr: {
+				src: "https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=qgrail&button_colour=e3e7ef&font_colour=262626&font_family=Inter&outline_colour=262626&coffee_colour=ff0000",
+			},
+			cls: "coffee-button-img",
+		});
 	}
 }
