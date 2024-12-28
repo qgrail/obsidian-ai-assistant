@@ -13,6 +13,9 @@ function generateUniqueId() {
 	return "_" + Math.random().toString(36).substr(2, 9);
 }
 
+const COPY_BUTTON = "📋";
+const DELETE_BUTTON = "🗑";
+
 function format_prompt_table(prompt_table: { [key: string]: any }[]) {
 	/**
 	 * Format the list of prompt to a valid one.
@@ -324,19 +327,30 @@ export class ChatModal extends Modal {
 		for (const [index, x] of this.prompt_table.entries()) {
 			const div = container.createEl("div", {
 				cls: `chat-div ${x["role"]}`,
+				attr: {
+					style: "position: relative",
+				},
 			});
 
-			// Add a delete button
-			div.style.position = "relative";
 			const deleteBtn = div.createEl("button", {
 				cls: "delete-btn",
-				text: "X",
+				text: DELETE_BUTTON,
+				attr: {
+					"aria-label": "Delete message",
+					title: "Delete message",
+					contentEditable: "false",
+				},
 			});
-			deleteBtn.contentEditable = "false";
-			deleteBtn.style.position = "absolute";
-			deleteBtn.style.top = "0";
-			deleteBtn.style.right = "0";
-			deleteBtn.style.display = "none";
+
+			const copyBtn = div.createEl("button", {
+				cls: "copy-btn",
+				text: COPY_BUTTON,
+				attr: {
+					"aria-label": "Copy to clipboard",
+					title: "Copy to clipboard",
+					contentEditable: "false",
+				},
+			});
 
 			if (x["role"] === "assistant") {
 				await MarkdownRenderer.renderMarkdown(
@@ -378,20 +392,45 @@ export class ChatModal extends Modal {
 
 			div.dataset.entryId = x["id"];
 
+			// Only allow editing user messages that are not arrays.
+			if (x["role"] === "user" && !Array.isArray(x["content"])) {
+				div.addEventListener("click", async () => {
+					div.contentEditable = "true";
+				});
+
+				div.addEventListener("input", () => {
+					this.prompt_table[index].content = div.innerText;
+					console.log(
+						"Updated prompt table",
+						this.prompt_table[index],
+					);
+				});
+			}
+
+			// All divs are clickable to show the delete/copy buttons
 			div.addEventListener("click", async () => {
-				// div.contentEditable = "true";
-				// div.focus();
 				deleteBtn.style.display = "block";
+				copyBtn.style.display = "block";
 			});
 
-			// div.onblur = () => {
-			// 	const newText = div.innerText;
-			// 	if (this.prompt_table[index]["content"] !== newText) {
-			// 		this.prompt_table[index]["content"] = newText;
-			// 	}
-			// 	div.contentEditable = "false";
-			// 	deleteBtn.style.display = "none";
-			// };
+			div.addEventListener("mouseover", () => {
+				deleteBtn.style.display = "block";
+				copyBtn.style.display = "block";
+			});
+
+			// You might also want to hide the buttons when the mouse leaves
+			div.addEventListener("mouseout", () => {
+				if (div.contentEditable !== "true") {
+					deleteBtn.style.display = "none";
+					copyBtn.style.display = "none";
+				}
+			});
+
+			div.addEventListener("blur", () => {
+				div.contentEditable = "false";
+				deleteBtn.style.display = "none";
+				copyBtn.style.display = "none";
+			});
 
 			deleteBtn.addEventListener("click", (event) => {
 				const entryId = div.dataset.entryId; // Assume you've stored the unique ID in the dataset when creating the div
@@ -401,6 +440,17 @@ export class ChatModal extends Modal {
 					(entry) => entry.id !== entryId,
 				);
 				console.log("Prompt table after deletion", this.prompt_table);
+			});
+
+			copyBtn.addEventListener("click", async (event) => {
+				let text = div.innerText;
+
+				// Remove each button's text from the copied content
+				[COPY_BUTTON, DELETE_BUTTON].forEach((button) => {
+					text = text.replace(button, "");
+				});
+				await navigator.clipboard.writeText(text.trim());
+				new Notice("Message copied to clipboard");
 			});
 		}
 
@@ -511,10 +561,15 @@ export class ChatModal extends Modal {
 			this.displayModalContent();
 		});
 		copy_button.addEventListener("click", async () => {
-			const conversation = this.prompt_table
+			let conversation = this.prompt_table
 				.map((x) => x["content"])
 				.join("\n\n");
-			await navigator.clipboard.writeText(conversation);
+
+			[COPY_BUTTON, DELETE_BUTTON].forEach((button) => {
+				conversation = conversation.replace(button, "");
+			});
+
+			await navigator.clipboard.writeText(conversation.trim());
 			new Notice("Conversation copied to clipboard");
 		});
 

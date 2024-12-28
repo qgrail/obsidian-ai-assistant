@@ -120,3 +120,16 @@
   overflow: hidden;
   z-index: -1;
 }
+
+.delete-btn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    display: none;
+}
+.copy-btn {
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    display: none;
+}
