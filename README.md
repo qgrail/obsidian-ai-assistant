@@ -90,5 +90,4 @@ You can install the [AI Assistant](https://obsidian.md/plugins?id=ai-assistant) 
 -   To use this plugin, with OpenAI models, you need an official API key from [here](https://platform.openai.com/account/api-keys),
 -   To use this plugin, with Anthropic Claude models, you need an official API key from [here](https://console.anthropic.com/settings/keys).
 
-
-<a href="https://www.buymeacoffee.com/qgrail"><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=qgrail&button_colour=e3e7ef&font_colour=262626&font_family=Inter&outline_colour=262626&coffee_colour=ff0000"></a>
+<a href="https://www.buymeacoffee.com/qgrail" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-violet.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>

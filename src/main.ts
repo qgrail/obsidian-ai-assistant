@@ -295,7 +295,7 @@ class AiAssistantSettingTab extends PluginSettingTab {
 			href: "https://buymeacoffee.com/qgrail",
 		}).createEl("img", {
 			attr: {
-				src: "https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=☕&slug=qgrail&button_colour=e3e7ef&font_colour=262626&font_family=Inter&outline_colour=262626&coffee_colour=ff0000",
+				src: "https://cdn.buymeacoffee.com/buttons/v2/default-violet.png",
 			},
 			cls: "coffee-button-img",
 		});

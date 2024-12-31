@@ -330,6 +330,24 @@ export class ChatModal extends Modal {
 		}
 	};
 
+	extract_text = (items: any): string => {
+		let output: string;
+		if (Array.isArray(items)) {
+			output = items
+				.map((content) => {
+					if (content["type"] === "text") {
+						return content["text"];
+					} else {
+						return content["type"];
+					}
+				})
+				.join("\n");
+		} else {
+			output = items;
+		}
+		return output;
+	};
+
 	displayModalContent = async () => {
 		const { contentEl } = this;
 		const container = this.contentEl.createEl("div", {
@@ -457,7 +475,7 @@ export class ChatModal extends Modal {
 			});
 
 			copyBtn.addEventListener("click", async (event) => {
-				let text = div.innerText;
+				let text = this.extract_text(x["content"]);
 
 				// Remove each button's text from the copied content
 				[COPY_BUTTON, DELETE_BUTTON].forEach((button) => {
@@ -576,7 +594,7 @@ export class ChatModal extends Modal {
 		});
 		copy_button.addEventListener("click", async () => {
 			let conversation = this.prompt_table
-				.map((x) => x["content"])
+				.map((x) => this.extract_text(x["content"]))
 				.join("\n\n");
 
 			[COPY_BUTTON, DELETE_BUTTON].forEach((button) => {
