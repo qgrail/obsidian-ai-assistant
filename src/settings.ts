@@ -9,6 +9,9 @@ export const OAI_IMAGE_CAPABLE_MODELS = [
 export const DEFAULT_OAI_IMAGE_MODEL = "gpt-4o-mini";
 
 export const ALL_MODELS = {
+	"qwen2.5-coder-7b-instruct": "qwen2.5-coder-7b-instruct",
+	"mistral-vlm-7b": "mistral-vlm-7b",
+	"gemini-2.0-flash-exp": "gemini-2.0-flash-exp",
 	"gpt-4o-mini": "gpt-4o mini",
 	"o1-mini": "o1-mini",
 	"o1-preview": "o1-preview",
@@ -29,3 +32,5 @@ export const ALL_IMAGE_MODELS = {
 export const DEFAULT_IMAGE_MODEL = "dall-e-3";
 
 export const DEFAULT_MAX_TOKENS = 500;
+
+export const OPENAI_BASE_URL = "https://api.openai.com/v1";

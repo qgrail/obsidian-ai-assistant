@@ -14,10 +14,12 @@ import {
 	DEFAULT_IMAGE_MODEL,
 	DEFAULT_OAI_IMAGE_MODEL,
 	DEFAULT_MAX_TOKENS,
+	OPENAI_BASE_URL,
 } from "./settings";
 
 interface AiAssistantSettings {
 	mySetting: string;
+	openAIBaseUrl: string;
 	openAIapiKey: string;
 	anthropicApiKey: string;
 	modelName: string;
@@ -31,6 +33,7 @@ interface AiAssistantSettings {
 const DEFAULT_SETTINGS: AiAssistantSettings = {
 	mySetting: "default",
 	openAIapiKey: "",
+	openAIBaseUrl: OPENAI_BASE_URL,
 	anthropicApiKey: "",
 	modelName: DEFAULT_OAI_IMAGE_MODEL,
 	imageModelName: DEFAULT_IMAGE_MODEL,
@@ -57,6 +60,7 @@ export default class AiAssistantPlugin extends Plugin {
 				this.settings.openAIapiKey,
 				this.settings.modelName,
 				this.settings.maxTokens,
+				this.settings.openAIBaseUrl,
 			);
 		}
 	}
@@ -176,6 +180,17 @@ class AiAssistantSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 		containerEl.createEl("h2", { text: "Settings for my AI assistant." });
+
+		new Setting(containerEl).setName("OpenAI Base URL").addText((text) =>
+			text
+				.setPlaceholder("Enter OpenAI base URL key here")
+				.setValue(this.plugin.settings.openAIBaseUrl)
+				.onChange(async (value) => {
+					this.plugin.settings.openAIBaseUrl = value;
+					await this.plugin.saveSettings();
+					this.plugin.build_api();
+				}),
+		);
 
 		new Setting(containerEl).setName("OpenAI API Key").addText((text) =>
 			text

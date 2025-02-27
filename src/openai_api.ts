@@ -10,8 +10,9 @@ export class OpenAIAssistant {
 	maxTokens: number;
 	apiKey: string;
 
-	constructor(apiKey: string, modelName: string, maxTokens: number) {
+	constructor(apiKey: string, modelName: string, maxTokens: number, openAIBaseUrl: string = 'http://localhost:1234/v1') {
 		this.apiFun = new OpenAI({
+			baseURL: openAIBaseUrl,
 			apiKey: apiKey,
 			dangerouslyAllowBrowser: true,
 		});
