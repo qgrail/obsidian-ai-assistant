@@ -10,8 +10,7 @@ The current available features of this plugin are:
 
 ## Latest Updates
 
-- Chat interface has been updated; you can now delete messages and edit your past messages.
-- Claude Sonnet 3.5 latest, Opus latest and GPT-4o mini, o1-preview and o1-mini are now available.
+- Claude 4 models and OpenAI o3 / o4 series are now available.
 
 ## How to use
 

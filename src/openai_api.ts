@@ -41,7 +41,7 @@ export class OpenAIAssistant {
 			model = DEFAULT_OAI_IMAGE_MODEL;
 		}
 		try {
-			const is_reasonning_model = model.includes("o1");
+			const is_reasonning_model = /o[124]/.test(model);
 			const params = {
 				messages: prompt_list,
 				model: model,

@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-ai-assistant",
-	"version": "1.6.1",
+	"version": "1.6.2",
 	"description": "AI Assistant plugin for Obsidian",
 	"main": "main.js",
 	"scripts": {
@@ -16,7 +16,7 @@
 		"@typescript-eslint/eslint-plugin": "6.10.0",
 		"@typescript-eslint/parser": "6.10.0",
 		"builtin-modules": "3.3.0",
-		"esbuild": "0.17.3",
+		"esbuild": "^0.25.5",
 		"obsidian": "latest",
 		"tslib": "2.6.2",
 		"typescript": "5.2.2"
