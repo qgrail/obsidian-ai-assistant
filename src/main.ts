@@ -17,49 +17,55 @@ import {
 } from "./settings";
 
 interface AiAssistantSettings {
-	mySetting: string;
-	openAIapiKey: string;
-	anthropicApiKey: string;
-	modelName: string;
-	imageModelName: string;
-	maxTokens: number;
-	replaceSelection: boolean;
-	imgFolder: string;
-	language: string;
+        mySetting: string;
+        openAIapiKey: string;
+        anthropicApiKey: string;
+        modelName: string;
+        customModelName: string;
+        imageModelName: string;
+        maxTokens: number;
+        replaceSelection: boolean;
+        imgFolder: string;
+        language: string;
 }
 
 const DEFAULT_SETTINGS: AiAssistantSettings = {
-	mySetting: "default",
-	openAIapiKey: "",
-	anthropicApiKey: "",
-	modelName: DEFAULT_OAI_IMAGE_MODEL,
-	imageModelName: DEFAULT_IMAGE_MODEL,
-	maxTokens: DEFAULT_MAX_TOKENS,
-	replaceSelection: true,
-	imgFolder: "AiAssistant/Assets",
-	language: "",
+        mySetting: "default",
+        openAIapiKey: "",
+        anthropicApiKey: "",
+        modelName: DEFAULT_OAI_IMAGE_MODEL,
+        customModelName: "",
+        imageModelName: DEFAULT_IMAGE_MODEL,
+        maxTokens: DEFAULT_MAX_TOKENS,
+        replaceSelection: true,
+        imgFolder: "AiAssistant/Assets",
+        language: "",
 };
 
 export default class AiAssistantPlugin extends Plugin {
-	settings: AiAssistantSettings;
-	aiAssistant: OpenAIAssistant;
+        settings: AiAssistantSettings;
+        aiAssistant: OpenAIAssistant;
 
-	build_api() {
-		if (this.settings.modelName.includes("claude")) {
-			this.aiAssistant = new AnthropicAssistant(
-				this.settings.openAIapiKey,
-				this.settings.anthropicApiKey,
-				this.settings.modelName,
-				this.settings.maxTokens,
-			);
-		} else {
-			this.aiAssistant = new OpenAIAssistant(
-				this.settings.openAIapiKey,
-				this.settings.modelName,
-				this.settings.maxTokens,
-			);
-		}
-	}
+        build_api() {
+                const selectedModel =
+                        this.settings.customModelName.trim() ||
+                        this.settings.modelName;
+
+                if (selectedModel.includes("claude")) {
+                        this.aiAssistant = new AnthropicAssistant(
+                                this.settings.openAIapiKey,
+                                this.settings.anthropicApiKey,
+                                selectedModel,
+                                this.settings.maxTokens,
+                        );
+                } else {
+                        this.aiAssistant = new OpenAIAssistant(
+                                this.settings.openAIapiKey,
+                                selectedModel,
+                                this.settings.maxTokens,
+                        );
+                }
+        }
 
 	async onload() {
 		await this.loadSettings();
@@ -200,19 +206,33 @@ class AiAssistantSettingTab extends PluginSettingTab {
 		);
 		containerEl.createEl("h3", { text: "Text Assistant" });
 
-		new Setting(containerEl)
-			.setName("Model Name")
-			.setDesc("Select your model")
-			.addDropdown((dropdown) =>
-				dropdown
-					.addOptions(ALL_MODELS)
-					.setValue(this.plugin.settings.modelName)
-					.onChange(async (value) => {
-						this.plugin.settings.modelName = value;
-						await this.plugin.saveSettings();
-						this.plugin.build_api();
-					}),
-			);
+                new Setting(containerEl)
+                        .setName("Model Name")
+                        .setDesc("Select your model")
+                        .addDropdown((dropdown) =>
+                                dropdown
+                                        .addOptions(ALL_MODELS)
+                                        .setValue(this.plugin.settings.modelName)
+                                        .onChange(async (value) => {
+                                                this.plugin.settings.modelName = value;
+                                                await this.plugin.saveSettings();
+                                                this.plugin.build_api();
+                                        }),
+                        );
+
+                new Setting(containerEl)
+                        .setName("Custom Model Name")
+                        .setDesc("Override selected model")
+                        .addText((text) =>
+                                text
+                                        .setPlaceholder("Type model name")
+                                        .setValue(this.plugin.settings.customModelName)
+                                        .onChange(async (value) => {
+                                                this.plugin.settings.customModelName = value;
+                                                await this.plugin.saveSettings();
+                                                this.plugin.build_api();
+                                        }),
+                        );
 
 		new Setting(containerEl)
 			.setName("Max Tokens")

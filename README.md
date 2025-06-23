@@ -56,6 +56,7 @@ The transcript will be immediately added to your note at your cursor location.
 ### Text Assistant
 
 -   **Model choice**: choice of the text model. Latest OpenAI and Anthropic models are available.
+-   **Custom model name**: if you need a model that isn't listed above, type its name here to override the dropdown selection.
 -   **Maximum number of tokens** in the generated answer
 -   **Replace or Add below**: In prompt mode, after having selected text from your note and enter your prompt,
     you can decide to replace your text by the assistant answer or to paste it bellow.
