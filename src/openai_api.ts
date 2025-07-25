@@ -254,6 +254,7 @@ export class PerplexityAssistant extends BaseAssistant {
 		}
 		
 		try {
+			// Always use non-streaming mode for now to avoid SSE parsing complexity
 			const response = await request({
 				url: "https://api.perplexity.ai/chat/completions",
 				method: "POST",
@@ -265,24 +266,20 @@ export class PerplexityAssistant extends BaseAssistant {
 					model: this.modelName,
 					messages: prompt_list,
 					max_tokens: this.maxTokens,
-					stream: streamMode,
+					stream: false,
 					temperature: 0.2,
 				}),
 			});
 
-			if (streamMode) {
-				// Note: Streaming implementation would need server-sent events parsing
-				// For now, fall back to non-streaming
-				const data = JSON.parse(response);
-				const content = data.choices[0].message.content;
-				if (htmlEl && content) {
-					htmlEl.innerHTML = content;
-				}
-				return content;
-			} else {
-				const data = JSON.parse(response);
-				return data.choices[0].message.content;
+			const data = JSON.parse(response);
+			const content = data.choices[0].message.content;
+			
+			if (streamMode && htmlEl && content) {
+				// Simulate streaming by updating the element immediately
+				htmlEl.innerHTML = content;
 			}
+			
+			return content;
 		} catch (err) {
 			this.display_error(err);
 		}
