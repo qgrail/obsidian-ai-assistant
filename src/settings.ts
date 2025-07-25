@@ -32,6 +32,12 @@ export const ALL_MODELS = {
 	"claude-3-opus-latest": "Claude 3 Opus",
 	"claude-3-5-sonnet-latest": "Claude 3.5 Sonnet",
 	"claude-3-5-haiku-latest": "Claude 3.5 Haiku",
+	"sonar": "Sonar",
+	"sonar-pro": "Sonar Pro",
+	"sonar-reasoning": "Sonar Reasoning",
+	"sonar-reasoning-pro": "Sonar Reasoning Pro",
+	"sonar-deep-research": "Sonar Deep Research",
+	"r1-1776": "R1 1776",
 };
 
 export const ALL_IMAGE_MODELS = {
