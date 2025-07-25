@@ -1,16 +1,17 @@
 # Obsidian AI Assistant
 
-Simple plugin to enable interactions with AI models such as [OpenAI ChatGPT](https://openai.com/blog/chatgpt), [Anthropic Claude](https://docs.anthropic.com/en/docs/models-overview), [OpenAI DALL·E](https://openai.com/product/dall-e-3), [OpenAI Whisper](https://openai.com/research/whisper) directly from your [Obsidian](https://obsidian.md/) notes.
+Simple plugin to enable interactions with AI models such as [OpenAI ChatGPT](https://openai.com/blog/chatgpt), [Anthropic Claude](https://docs.anthropic.com/en/docs/models-overview), [Perplexity AI](https://docs.perplexity.ai/), [OpenAI DALL·E](https://openai.com/product/dall-e-3), [OpenAI Whisper](https://openai.com/research/whisper) directly from your [Obsidian](https://obsidian.md/) notes.
 
 The current available features of this plugin are:
 
--   🤖 Text assistant with OpenAI GPTs and Anthropic Claude models,
+-   🤖 Text assistant with OpenAI GPTs, Anthropic Claude, and Perplexity AI models,
 -   🖼 Image generation with DALL·E3 and DALL·E2,
 -   🗣 Speech to text with Whisper.
 
 ## Latest Updates
 
 - Claude 4 models and OpenAI o3 / o4 series are now available.
+- Added support for Perplexity AI models including Sonar, Sonar Pro, Sonar Reasoning, and R1 series.
 
 ## How to use
 
@@ -30,7 +31,7 @@ You have two commands to interact with the text assistant:
 Chat with the AI assistant from your Vault to generate content for your notes.
 From the chat, you can clic on any interaction to copy it directly to your clipboard.
 You can also copy the whole conversation.
-Chat mode now allows you to upload images to interact with GPT4-Vision or Claude models.
+Chat mode now allows you to upload images to interact with GPT4-Vision, Claude, or supported Perplexity models.
 
 #### Prompt mode
 
@@ -55,7 +56,7 @@ The transcript will be immediately added to your note at your cursor location.
 
 ### Text Assistant
 
--   **Model choice**: choice of the text model. Latest OpenAI and Anthropic models are available.
+-   **Model choice**: choice of the text model. Latest OpenAI, Anthropic, and Perplexity models are available.
 -   **Maximum number of tokens** in the generated answer
 -   **Replace or Add below**: In prompt mode, after having selected text from your note and enter your prompt,
     you can decide to replace your text by the assistant answer or to paste it bellow.
@@ -87,6 +88,7 @@ You can install the [AI Assistant](https://obsidian.md/plugins?id=ai-assistant) 
 ## Requirements
 
 -   To use this plugin, with OpenAI models, you need an official API key from [here](https://platform.openai.com/account/api-keys),
--   To use this plugin, with Anthropic Claude models, you need an official API key from [here](https://console.anthropic.com/settings/keys).
+-   To use this plugin, with Anthropic Claude models, you need an official API key from [here](https://console.anthropic.com/settings/keys),
+-   To use this plugin, with Perplexity AI models, you need an official API key from [here](https://www.perplexity.ai/settings/api).
 
 <a href="https://www.buymeacoffee.com/qgrail" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-violet.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>

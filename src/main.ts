@@ -7,7 +7,7 @@ import {
 	Setting,
 } from "obsidian";
 import { ChatModal, ImageModal, PromptModal, SpeechModal } from "./modal";
-import { AnthropicAssistant, OpenAIAssistant } from "./openai_api";
+import { AnthropicAssistant, BaseAssistant, OpenAIAssistant, PerplexityAssistant } from "./openai_api";
 import {
 	ALL_IMAGE_MODELS,
 	ALL_MODELS,
@@ -20,6 +20,7 @@ interface AiAssistantSettings {
 	mySetting: string;
 	openAIapiKey: string;
 	anthropicApiKey: string;
+	perplexityApiKey: string;
 	modelName: string;
 	imageModelName: string;
 	maxTokens: number;
@@ -32,6 +33,7 @@ const DEFAULT_SETTINGS: AiAssistantSettings = {
 	mySetting: "default",
 	openAIapiKey: "",
 	anthropicApiKey: "",
+	perplexityApiKey: "",
 	modelName: DEFAULT_OAI_IMAGE_MODEL,
 	imageModelName: DEFAULT_IMAGE_MODEL,
 	maxTokens: DEFAULT_MAX_TOKENS,
@@ -42,13 +44,18 @@ const DEFAULT_SETTINGS: AiAssistantSettings = {
 
 export default class AiAssistantPlugin extends Plugin {
 	settings: AiAssistantSettings;
-	aiAssistant: OpenAIAssistant;
+	aiAssistant: BaseAssistant;
 
 	build_api() {
 		if (this.settings.modelName.includes("claude")) {
 			this.aiAssistant = new AnthropicAssistant(
-				this.settings.openAIapiKey,
 				this.settings.anthropicApiKey,
+				this.settings.modelName,
+				this.settings.maxTokens,
+			);
+		} else if (this.settings.modelName.includes("sonar") || this.settings.modelName.includes("r1")) {
+			this.aiAssistant = new PerplexityAssistant(
+				this.settings.perplexityApiKey,
 				this.settings.modelName,
 				this.settings.maxTokens,
 			);
@@ -194,6 +201,17 @@ class AiAssistantSettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.anthropicApiKey)
 				.onChange(async (value) => {
 					this.plugin.settings.anthropicApiKey = value;
+					await this.plugin.saveSettings();
+					this.plugin.build_api();
+				}),
+		);
+
+		new Setting(containerEl).setName("Perplexity API Key").addText((text) =>
+			text
+				.setPlaceholder("Enter Perplexity key here")
+				.setValue(this.plugin.settings.perplexityApiKey)
+				.onChange(async (value) => {
+					this.plugin.settings.perplexityApiKey = value;
 					await this.plugin.saveSettings();
 					this.plugin.build_api();
 				}),

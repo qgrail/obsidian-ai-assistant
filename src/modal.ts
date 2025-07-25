@@ -7,7 +7,7 @@ import {
 	Notice,
 	requestUrl,
 } from "obsidian";
-import { AnthropicAssistant, OpenAIAssistant } from "./openai_api";
+import { AnthropicAssistant, BaseAssistant, OpenAIAssistant } from "./openai_api";
 
 function generateUniqueId() {
 	return "_" + Math.random().toString(36).substr(2, 9);
@@ -230,7 +230,7 @@ export class ChatModal extends Modal {
 	aiAssistant: any;
 	is_generating_answer: boolean;
 
-	constructor(app: App, assistant: OpenAIAssistant) {
+	constructor(app: App, assistant: BaseAssistant) {
 		super(app);
 		this.aiAssistant = assistant;
 		this.is_generating_answer = false;

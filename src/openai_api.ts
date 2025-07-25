@@ -4,20 +4,62 @@ import { OpenAI } from "openai";
 
 import { DEFAULT_OAI_IMAGE_MODEL, OAI_IMAGE_CAPABLE_MODELS } from "./settings";
 
-export class OpenAIAssistant {
-	modelName: string;
+export class BaseAssistant {
+    modelName: string;
+    apiKey: string;
+    maxTokens: number;
+
+    constructor(apiKey: string, modelName: string, maxTokens: number) {
+        this.apiKey = apiKey;
+        this.modelName = modelName;
+        this.maxTokens = maxTokens;
+    }
+
+    display_error(err: any) {
+        new Notice(`API Error: ${err}`);
+    }
+
+    async text_api_call(
+        prompt_list: { [key: string]: string }[],
+        htmlEl?: HTMLElement,
+        view?: MarkdownView,
+    ): Promise<string | undefined> {
+        throw new Error("text_api_call not implemented");
+    }
+    
+    async img_api_call(
+        model: string,
+        prompt: string,
+        img_size: string,
+        num_img: number,
+        is_hd: boolean,
+    ): Promise<string[] | undefined> {
+        throw new Error("img_api_call not implemented");
+    }
+    
+    async whisper_api_call(
+        input: Blob,
+        language: string,
+    ): Promise<string | undefined> {
+        throw new Error("whisper_api_call not implemented");
+    }
+    
+    async text_to_speech_call(
+        input_text: string,
+    ): Promise<void> {
+        throw new Error("text_to_speech_call not implemented");
+    }
+}
+
+export class OpenAIAssistant extends BaseAssistant {
 	apiFun: any;
-	maxTokens: number;
-	apiKey: string;
 
 	constructor(apiKey: string, modelName: string, maxTokens: number) {
+		super(apiKey, modelName, maxTokens);
 		this.apiFun = new OpenAI({
 			apiKey: apiKey,
 			dangerouslyAllowBrowser: true,
 		});
-		this.modelName = modelName;
-		this.maxTokens = maxTokens;
-		this.apiKey = apiKey;
 	}
 
 	display_error = (err: any) => {
@@ -32,7 +74,7 @@ export class OpenAIAssistant {
 		prompt_list: { [key: string]: string }[],
 		htmlEl?: HTMLElement,
 		view?: MarkdownView,
-	) => {
+	): Promise<string | undefined> => {
 		const streamMode = htmlEl !== undefined;
 		const has_img = prompt_list.some((el) => Array.isArray(el.content));
 		let model = this.modelName;
@@ -77,7 +119,7 @@ export class OpenAIAssistant {
 		img_size: string,
 		num_img: number,
 		is_hd: boolean,
-	) => {
+	): Promise<string[] | undefined> => {
 		try {
 			const params: { [key: string]: string | number } = {};
 			params.model = model;
@@ -96,7 +138,7 @@ export class OpenAIAssistant {
 		}
 	};
 
-	whisper_api_call = async (input: Blob, language: string) => {
+	whisper_api_call = async (input: Blob, language: string): Promise<string | undefined> => {
 		try {
 			const completion = await this.apiFun.audio.transcriptions.create({
 				file: input,
@@ -109,7 +151,7 @@ export class OpenAIAssistant {
 		}
 	};
 
-	text_to_speech_call = async (input_text: string) => {
+	text_to_speech_call = async (input_text: string): Promise<void> => {
 		try {
 			const mp3 = await this.apiFun.audio.speech.create({
 				model: "tts-1",
@@ -130,25 +172,16 @@ export class OpenAIAssistant {
 	};
 }
 
-export class AnthropicAssistant extends OpenAIAssistant {
-	anthropicApiKey: string;
-
-	constructor(
-		openAIapiKey: string,
-		anthropicApiKey: string,
-		modelName: string,
-		maxTokens: number,
-	) {
-		super(openAIapiKey, modelName, maxTokens);
-
-		this.anthropicApiKey = anthropicApiKey;
-	}
+export class AnthropicAssistant extends BaseAssistant {
+	display_error(err: any) {
+        new Notice(`Anthropic API Error: ${err}`);
+    }
 
 	text_api_call = async (
 		prompt_list: { [key: string]: string }[],
 		htmlEl?: HTMLElement,
 		view?: MarkdownView,
-	) => {
+	): Promise<string | undefined> => {
 		try {
 			const response = await request({
 				url: "https://api.anthropic.com/v1/messages",
@@ -156,7 +189,7 @@ export class AnthropicAssistant extends OpenAIAssistant {
 				method: "POST",
 
 				headers: {
-					"x-api-key": this.anthropicApiKey,
+					"x-api-key": this.apiKey,
 					"anthropic-version": "2023-06-01",
 					"content-type": "application/json",
 				},
@@ -173,5 +206,107 @@ export class AnthropicAssistant extends OpenAIAssistant {
 		} catch (err) {
 			this.display_error(err);
 		}
+	};
+
+	img_api_call = async (
+		model: string,
+		prompt: string,
+		img_size: string,
+		num_img: number,
+		is_hd: boolean,
+	): Promise<string[] | undefined> => {
+		this.display_error("Image generation not supported by Anthropic API");
+		return undefined;
+	};
+
+	whisper_api_call = async (
+		input: Blob,
+		language: string,
+	): Promise<string | undefined> => {
+		this.display_error("Speech-to-text not supported by Anthropic API");
+		return undefined;
+	};
+
+	text_to_speech_call = async (
+		input_text: string,
+	): Promise<void> => {
+		this.display_error("Text-to-speech not supported by Anthropic API");
+	};
+}
+
+export class PerplexityAssistant extends BaseAssistant {
+	display_error(err: any) {
+        new Notice(`Perplexity API Error: ${err}`);
+    }
+
+	text_api_call = async (
+		prompt_list: { [key: string]: string }[],
+		htmlEl?: HTMLElement,
+		view?: MarkdownView,
+	): Promise<string | undefined> => {
+		const streamMode = htmlEl !== undefined;
+		const has_img = prompt_list.some((el) => Array.isArray(el.content));
+		
+		// Check if model supports images (sonar-deep-research doesn't)
+		if (has_img && this.modelName === "sonar-deep-research") {
+			this.display_error("sonar-deep-research model does not support image input");
+			return undefined;
+		}
+		
+		try {
+			// Always use non-streaming mode for now to avoid SSE parsing complexity
+			const response = await request({
+				url: "https://api.perplexity.ai/chat/completions",
+				method: "POST",
+				headers: {
+					"Authorization": `Bearer ${this.apiKey}`,
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					model: this.modelName,
+					messages: prompt_list,
+					max_tokens: this.maxTokens,
+					stream: false,
+					temperature: 0.2,
+				}),
+			});
+
+			const data = JSON.parse(response);
+			const content = data.choices[0].message.content;
+			
+			if (streamMode && htmlEl && content) {
+				// Simulate streaming by updating the element immediately
+				htmlEl.innerHTML = content;
+			}
+			
+			return content;
+		} catch (err) {
+			this.display_error(err);
+		}
+	};
+
+	img_api_call = async (
+		model: string,
+		prompt: string,
+		img_size: string,
+		num_img: number,
+		is_hd: boolean,
+	): Promise<string[] | undefined> => {
+		this.display_error("Image generation not supported by Perplexity API");
+		return undefined;
+	};
+
+	whisper_api_call = async (
+		input: Blob,
+		language: string,
+	): Promise<string | undefined> => {
+		this.display_error("Speech-to-text not supported by Perplexity API");
+		return undefined;
+	};
+
+	text_to_speech_call = async (
+		input_text: string,
+	): Promise<void> => {
+		this.display_error("Text-to-speech not supported by Perplexity API");
 	};
 }
