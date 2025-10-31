@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "WebSearch",
+      "WebFetch(domain:platform.openai.com)",
+      "WebFetch(domain:community.openai.com)",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)"
+    ],
+    "deny": []
+  }
+}
