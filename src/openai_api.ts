@@ -9,15 +9,21 @@ export class OpenAIAssistant {
 	apiFun: any;
 	maxTokens: number;
 	apiKey: string;
+	useResponsesApi: boolean;
 
-	constructor(apiKey: string, modelName: string, maxTokens: number) {
-		this.apiFun = new OpenAI({
+	constructor(apiKey: string, modelName: string, maxTokens: number, baseURL?: string, useResponsesApi?: boolean) {
+		const config: { apiKey: string; dangerouslyAllowBrowser: boolean; baseURL?: string } = {
 			apiKey: apiKey,
 			dangerouslyAllowBrowser: true,
-		});
+		};
+		if (baseURL) {
+			config.baseURL = baseURL;
+		}
+		this.apiFun = new OpenAI(config);
 		this.modelName = modelName;
 		this.maxTokens = maxTokens;
 		this.apiKey = apiKey;
+		this.useResponsesApi = useResponsesApi || false;
 	}
 
 	display_error = (err: any) => {
@@ -32,6 +38,16 @@ export class OpenAIAssistant {
 		prompt_list: { [key: string]: string }[],
 		htmlEl?: HTMLElement,
 		view?: MarkdownView,
+	) => {
+		if (this.useResponsesApi) {
+			return this.responses_api_call(prompt_list, htmlEl);
+		}
+		return this.completions_api_call(prompt_list, htmlEl);
+	};
+
+	private completions_api_call = async (
+		prompt_list: { [key: string]: string }[],
+		htmlEl?: HTMLElement,
 	) => {
 		const streamMode = htmlEl !== undefined;
 		const has_img = prompt_list.some((el) => Array.isArray(el.content));
@@ -65,6 +81,41 @@ export class OpenAIAssistant {
 				return htmlEl.innerHTML;
 			} else {
 				return response.choices[0].message.content;
+			}
+		} catch (err) {
+			this.display_error(err);
+		}
+	};
+
+	private responses_api_call = async (
+		prompt_list: { [key: string]: string }[],
+		htmlEl?: HTMLElement,
+	) => {
+		const streamMode = htmlEl !== undefined;
+		try {
+			if (streamMode) {
+				const stream = await this.apiFun.responses.create({
+					model: this.modelName,
+					input: prompt_list,
+					max_output_tokens: this.maxTokens,
+					stream: true,
+				});
+
+				let responseText = "";
+				for await (const event of stream) {
+					if (event.type === "response.output_text.delta") {
+						responseText = responseText.concat(event.delta);
+						htmlEl.innerHTML = responseText;
+					}
+				}
+				return htmlEl.innerHTML;
+			} else {
+				const response = await this.apiFun.responses.create({
+					model: this.modelName,
+					input: prompt_list,
+					max_output_tokens: this.maxTokens,
+				});
+				return response.output_text;
 			}
 		} catch (err) {
 			this.display_error(err);
@@ -132,16 +183,19 @@ export class OpenAIAssistant {
 
 export class AnthropicAssistant extends OpenAIAssistant {
 	anthropicApiKey: string;
+	anthropicBaseURL: string;
 
 	constructor(
 		openAIapiKey: string,
 		anthropicApiKey: string,
 		modelName: string,
 		maxTokens: number,
+		baseURL?: string,
 	) {
 		super(openAIapiKey, modelName, maxTokens);
 
 		this.anthropicApiKey = anthropicApiKey;
+		this.anthropicBaseURL = baseURL || "https://api.anthropic.com/v1/messages";
 	}
 
 	text_api_call = async (
@@ -151,7 +205,7 @@ export class AnthropicAssistant extends OpenAIAssistant {
 	) => {
 		try {
 			const response = await request({
-				url: "https://api.anthropic.com/v1/messages",
+				url: this.anthropicBaseURL,
 
 				method: "POST",
 
